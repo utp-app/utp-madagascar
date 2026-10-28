@@ -51,7 +51,7 @@
   <div class="header">
     <h1>⭐ Tableau de Bord Direction</h1>
     <div>
-      <button class="btn btn-cert" onclick="window.location.href='/certificat.html'">🎓 Générateur de Certificats</button>
+      <button class="btn btn-cert" onclick="window.location.href='/certificat.html'">🎓 Certificats</button>
       <button class="btn btn-danger" onclick="window.location.href='/'">🔒 Déconnexion</button>
     </div>
   </div>
@@ -60,9 +60,9 @@
     <button class="nav-tab active" id="navAppro" onclick="changerOnglet('appro')">✅ Validation des Livres</button>
     <button class="nav-tab" id="navCompta" onclick="changerOnglet('compta')">💰 Comptabilité</button>
     <button class="nav-tab" id="navEleves" onclick="changerOnglet('eleves')">👨‍🎓 Élèves & PDF</button>
+    <button class="nav-tab" id="navLivres" onclick="changerOnglet('livres')">📚 Commandes Livres</button>
   </div>
 
-  <!-- Onglet Validation des Livres -->
   <div id="ongletAppro">
     <div class="card">
       <h3>✅ Élèves en attente d'approbation pour le livre</h3>
@@ -74,17 +74,26 @@
     </div>
   </div>
 
-  <!-- Onglet Comptabilité -->
   <div id="ongletCompta" class="hidden">
     <div id="listeCompta"><div class="loading">Chargement de la comptabilité...</div></div>
   </div>
 
-  <!-- Onglet Élèves & PDF -->
   <div id="ongletEleves" class="hidden">
     <div class="card">
       <h3>📋 Liste des élèves par centre</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">Cliquez sur un centre pour voir ses élèves et télécharger la liste au format PDF (sans les montants).</p>
       <div id="listeCentresPDF"></div>
+    </div>
+  </div>
+
+  <!-- NOUVEL ONGLET COMMANDES LIVRES -->
+  <div id="ongletLivres" class="hidden">
+    <div class="card">
+      <h3>📚 Commandes de livres reçues</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Les responsables ont versé ces montants dans la caisse de la Direction.</p>
+      <table>
+        <thead><tr><th>Date</th><th>Centre</th><th>Nombre de livres</th><th>Montant (Ar)</th><th>Statut</th></tr></thead>
+        <tbody id="tbodyLivres"><tr><td colspan="5" class="loading">Chargement...</td></tr></tbody>
+      </table>
     </div>
   </div>
 
@@ -93,7 +102,6 @@
 <script>
 const API_BASE = '';
 function apiHeaders() {
-  // Remplacer par le code d'accès réel de la direction si besoin
   const code = sessionStorage.getItem('utp_code') || 'COORDO0009';
   sessionStorage.setItem('utp_code', code);
   return { 'Content-Type': 'application/json', 'x-code-acces': code };
@@ -111,10 +119,11 @@ window.onload = async function() {
   await chargerApprobations();
   await chargerCompta();
   await chargerElevesParCentre();
+  await chargerLivres();
 };
 
 function changerOnglet(onglet) {
-  ['appro','compta','eleves'].forEach(o => {
+  ['appro','compta','eleves','livres'].forEach(o => {
     document.getElementById('nav' + o.charAt(0).toUpperCase() + o.slice(1)).classList.remove('active');
     document.getElementById('onglet' + o.charAt(0).toUpperCase() + o.slice(1)).classList.add('hidden');
   });
@@ -122,11 +131,10 @@ function changerOnglet(onglet) {
   document.getElementById('onglet' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.remove('hidden');
 }
 
-// --- VALIDATION DES LIVRES ---
+// --- APPROBATION DES LIVRES ---
 async function chargerApprobations() {
   try {
     const eleves = await apiFetch('/api/etudiants');
-    // On filtre les élèves qui ont payé >= 20000 mais qui sont encore en "en_attente" (ou statut par défaut)
     const enAttente = eleves.filter(e => e.montant_paye >= 20000 && e.statut !== 'actif');
     
     const tbody = document.getElementById('tbodyAppro');
@@ -134,7 +142,6 @@ async function chargerApprobations() {
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun élève en attente.</td></tr>';
       return;
     }
-    
     tbody.innerHTML = enAttente.map(e => `
       <tr>
         <td><strong>${e.utp_id}</strong></td>
@@ -179,9 +186,7 @@ async function chargerCompta() {
         </div>`;
     });
     document.getElementById('listeCompta').innerHTML = html;
-  } catch(e) {
-    document.getElementById('listeCompta').innerHTML = `<div style="color:red; text-align:center;">Erreur : ${e.message}</div>`;
-  }
+  } catch(e) { document.getElementById('listeCompta').innerHTML = `<div style="color:red; text-align:center;">Erreur : ${e.message}</div>`; }
 }
 
 // --- ÉLÈVES PAR CENTRE & PDF ---
@@ -189,7 +194,6 @@ async function chargerElevesParCentre() {
   try {
     const eleves = await apiFetch('/api/etudiants');
     const centres = await apiFetch('/api/centres');
-    
     let html = '';
     centres.forEach(c => {
       const elevesCentre = eleves.filter(e => e.centre_id === c.id);
@@ -203,13 +207,10 @@ async function chargerElevesParCentre() {
             <button class="btn btn-danger" onclick="telechargerPDFCentre(${c.id}, '${c.nom}')" style="margin-bottom:15px;">🖨️ Télécharger la liste (PDF)</button>
             <table>
               <thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Date d'entrée</th></tr></thead>
-              <tbody>
-                ${elevesCentre.map(e => `<tr><td>${e.utp_id}</td><td>${e.nom} ${e.prenom}</td><td>${e.matiere}</td><td>${e.niveau}</td><td>${e.date_entree}</td></tr>`).join('')}
-              </tbody>
+              <tbody>${elevesCentre.map(e => `<tr><td>${e.utp_id}</td><td>${e.nom} ${e.prenom}</td><td>${e.matiere}</td><td>${e.niveau}</td><td>${e.date_entree}</td></tr>`).join('')}</tbody>
             </table>
           </div>
-        </div>
-      `;
+        </div>`;
     });
     document.getElementById('listeCentresPDF').innerHTML = html;
   } catch(e) { console.error(e); }
@@ -218,30 +219,34 @@ async function chargerElevesParCentre() {
 async function telechargerPDFCentre(centreId, nomCentre) {
   const eleves = await apiFetch('/api/etudiants');
   const elevesCentre = eleves.filter(e => e.centre_id === centreId);
-  
   if (elevesCentre.length === 0) return alert("Aucun élève dans ce centre.");
-
-  let html = `<html><head><title>Liste ${nomCentre}</title><style>
-    body { font-family: 'Segoe UI', Arial; padding: 20px; }
-    h1 { color: #1A237E; text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size:14px; }
-    th { background: #1A237E; color: white; padding: 12px; text-align: left; }
-    td { padding: 10px; border-bottom: 1px solid #ddd; }
-    .btn-print { padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom:20px;}
-    @media print { .btn-print { display: none; } }
-  </style></head><body>
-    <h1>UTP Madagascar - Élèves du centre ${nomCentre}</h1>
-    <button class="btn-print" onclick="window.print()">🖨️ Enregistrer en PDF / Imprimer</button>
-    <table><thead><tr><th>ID UTP</th><th>Nom complet</th><th>Matière</th><th>Niveau</th><th>Date d'entrée</th></tr></thead><tbody>`;
-  
-  elevesCentre.forEach(e => {
-    html += `<tr><td>${e.utp_id}</td><td>${e.nom} ${e.prenom}</td><td>${e.matiere}</td><td>${e.niveau}</td><td>${e.date_entree}</td></tr>`;
-  });
+  let html = `<html><head><title>Liste ${nomCentre}</title><style>body { font-family: Arial; padding: 20px; } h1 { color: #1A237E; text-align: center; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th { background: #1A237E; color: white; padding: 10px; } td { padding: 10px; border-bottom: 1px solid #ddd; } @media print { button { display: none; } }</style></head><body><h1>UTP Madagascar - Élèves du centre ${nomCentre}</h1><button onclick="window.print()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">🖨️ Imprimer en PDF</button><table><thead><tr><th>ID UTP</th><th>Nom complet</th><th>Matière</th><th>Niveau</th><th>Date d'entrée</th></tr></thead><tbody>`;
+  elevesCentre.forEach(e => { html += `<tr><td>${e.utp_id}</td><td>${e.nom} ${e.prenom}</td><td>${e.matiere}</td><td>${e.niveau}</td><td>${e.date_entree}</td></tr>`; });
   html += `</tbody></table></body></html>`;
-
   const win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
+}
+
+// --- COMMANDES LIVRES ---
+async function chargerLivres() {
+  try {
+    const livres = await apiFetch('/api/direction/livres');
+    const tbody = document.getElementById('tbodyLivres');
+    if (livres.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune commande pour le moment.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = livres.map(l => `
+      <tr>
+        <td>${new Date(l.date_commande).toLocaleDateString('fr-FR')}</td>
+        <td>${l.centre_nom}</td>
+        <td>${l.nombre_livres}</td>
+        <td style="color:#2E7D32; font-weight:bold;">${l.montant_total.toLocaleString()} Ar</td>
+        <td>${l.statut === 'valide' ? '✅ Validé' : '⏳ En attente'}</td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
 }
 </script>
 </body>
