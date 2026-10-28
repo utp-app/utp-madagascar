@@ -26,52 +26,77 @@ async function login() {
   try {
     const data = await api('/api/login', 'POST', { code });
     session = data;
+    
+    // Sauvegarde de la session pour le retour depuis la page Badge
     sessionStorage.setItem('utp_code', code);
+    sessionStorage.setItem('utp_session_data', JSON.stringify(data));
     
-    $('#login-screen').classList.remove('active');
-    $('#main-screen').classList.add('active');
-    $('#user-info').textContent = `${session.utilisateur.nom} (${session.utilisateur.role})`;
-    
-    // GESTION DES ACCÈS SELON LE RÔLE
-    if (session.utilisateur.role === 'admin') {
-      $('#interface-admin-direction').style.display = 'block'; // Affiche la zone du bas
-      $('#btn-admin').style.display = 'inline-block';
-      $('#interface-responsable').style.display = 'none';
-    } 
-    else if (session.utilisateur.role === 'direction') {
-      $('#interface-admin-direction').style.display = 'block'; // Affiche la zone du bas
-      $('#btn-direction').style.display = 'inline-block';
-      $('#interface-responsable').style.display = 'none';
-    } 
-    else {
-      // Responsable : on affiche son interface de travail
-      $('#interface-responsable').style.display = 'block';
-      $('#interface-admin-direction').style.display = 'none'; // Cache totalement la zone du bas
-      $('#btn-admin').style.display = 'none';
-      $('#btn-direction').style.display = 'none';
-      await init(); 
-    }
+    afficherInterface();
   } catch (e) { 
     $('#login-error').textContent = e.message; 
   }
 }
 
+// --- AFFICHAGE DE L'INTERFACE (Factorisé) ---
+async function afficherInterface() {
+  $('#login-screen').classList.remove('active');
+  $('#main-screen').classList.add('active');
+  $('#user-info').textContent = `${session.utilisateur.nom} (${session.utilisateur.role})`;
+  
+  // GESTION DES ACCÈS SELON LE RÔLE
+  if (session.utilisateur.role === 'admin') {
+    $('#interface-admin-direction').style.display = 'block';
+    $('#btn-admin').style.display = 'inline-block';
+    $('#interface-responsable').style.display = 'none';
+  } 
+  else if (session.utilisateur.role === 'direction') {
+    $('#interface-admin-direction').style.display = 'block';
+    $('#btn-direction').style.display = 'inline-block';
+    $('#interface-responsable').style.display = 'none';
+  } 
+  else {
+    // Responsable : on affiche son interface de travail
+    $('#interface-responsable').style.display = 'block';
+    $('#interface-admin-direction').style.display = 'none';
+    $('#btn-admin').style.display = 'none';
+    $('#btn-direction').style.display = 'none';
+    
+    // On charge les données uniquement si l'interface est vide
+    if (centres.length === 0) {
+      await init(); 
+    }
+    
+    // Si on revient de la page badge (/?tab=etudiants), on ouvre le bon onglet
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'etudiants') {
+      showTab('etudiants');
+    } else {
+      showTab('etudiants'); // Par défaut, on ouvre "Étudiants"
+    }
+  }
+}
+
+// --- RESTAURATION DE SESSION AU CHARGEMENT ---
+window.onload = async function() {
+  const savedData = sessionStorage.getItem('utp_session_data');
+  if (savedData) {
+    session = JSON.parse(savedData);
+    await afficherInterface();
+  }
+};
+
 // --- DÉCONNEXION SÉCURISÉE ---
 function logout() { 
-  // 1. Vider la session
   session = null; 
   sessionStorage.clear(); 
   localStorage.clear(); 
   
-  // 2. Cacher l'écran principal et afficher la connexion
   document.getElementById('main-screen').classList.remove('active');
   document.getElementById('login-screen').classList.add('active');
   
-  // 3. Vider les champs
   document.getElementById('code-input').value = '';
   document.getElementById('login-error').textContent = '';
   
-  // 4. Réinitialiser les boutons
   document.getElementById('btn-admin').style.display = 'none';
   document.getElementById('btn-direction').style.display = 'none';
   document.getElementById('interface-responsable').style.display = 'none';
@@ -86,24 +111,28 @@ function showTab(name) {
 
 // --- INITIALISATION DES DONNÉES ---
 async function init() {
-  centres = await api('/api/centres');
-  matieres = await api('/api/matieres');
+  try {
+    centres = await api('/api/centres');
+    matieres = await api('/api/matieres');
 
-  const fillCentres = (id) => {
-    const sel = $(id);
-    if(!sel) return;
-    sel.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
-  };
-  fillCentres('#e-centre');
+    const fillCentres = (id) => {
+      const sel = $(id);
+      if(!sel) return;
+      sel.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+    };
+    fillCentres('#e-centre');
 
-  const matSel = $('#e-matiere');
-  if (matSel) {
-    matSel.innerHTML = Object.keys(matieres).map(m => `<option>${m}</option>`).join('');
-    matSel.onchange = () => majNiveaux();
-    majNiveaux();
+    const matSel = $('#e-matiere');
+    if (matSel) {
+      matSel.innerHTML = Object.keys(matieres).map(m => `<option>${m}</option>`).join('');
+      matSel.onchange = () => majNiveaux();
+      majNiveaux();
+    }
+
+    await chargerEtudiants();
+  } catch (e) {
+    console.error("Erreur d'initialisation :", e);
   }
-
-  await chargerEtudiants();
 }
 
 function majNiveaux() {
