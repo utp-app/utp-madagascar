@@ -1,17 +1,14 @@
 {
   "name": "utp-app",
   "version": "1.0.0",
-  "description": "Système de gestion UTP - Application complète",
+  "description": "Système de gestion UTP",
   "main": "server.js",
   "scripts": {
-    "start": "start": "node importer.js && node import_eleves.js && node server.js"
+    "start": "node importer.js && node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
     "cors": "^2.8.5",
     "express": "^4.19.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }
