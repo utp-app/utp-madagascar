@@ -22,11 +22,19 @@
   </section>
 
   <section id="main-screen" class="screen">
-    <nav>
-      <button onclick="showTab('etudiants')">Étudiants</button>
-      <button onclick="showTab('paiements')">Paiements</button>
-      <button onclick="window.location.href='/badge.html'">Badges</button>
-      <button onclick="logout()" style="margin-left:auto; background:red; color:white;">Déconnexion</button>
+        <nav>
+      <!-- Ces boutons sont visibles uniquement par les Responsables -->
+      <div id="nav-responsable" style="display:none; gap:10px;">
+        <button onclick="showTab('etudiants')">Étudiants</button>
+        <button onclick="showTab('paiements')">Paiements</button>
+        <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
+      </div>
+
+      <!-- Ces boutons sont visibles uniquement par l'Admin et la Direction -->
+      <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; background:#00897B; color:white;">⚙️ Paramétrage Admin</button>
+      <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; background:#E65100; color:white;">⭐ Tableau de Bord Direction</button>
+      
+      <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
     </nav>
 
     <!-- Inscription -->
