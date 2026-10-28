@@ -22,6 +22,11 @@
   .card { background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.05); }
   .card h3 { color:#1A237E; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px; }
   
+  .form-row { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .form-group { flex:1; min-width:200px; }
+  .form-group label { display:block; font-size:11px; font-weight:700; margin-bottom:4px; color:#333; }
+  .form-group input, .form-group select { width:100%; padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:12px; }
+  
   table { width:100%; border-collapse:collapse; font-size:13px; }
   th, td { padding:12px; text-align:left; border-bottom:1px solid #eee; }
   th { background:#1A237E; color:white; }
@@ -38,15 +43,51 @@
   </div>
 
   <div class="nav-tabs">
-    <button class="nav-tab active" id="navEleves" onclick="changerOnglet('eleves')">👨‍🎓 Tous les Élèves</button>
-    <button class="nav-tab" id="navTransactions" onclick="changerOnglet('transactions')">💳 Toutes les Transactions</button>
+    <button class="nav-tab active" id="navCentres" onclick="changerOnglet('centres')">🏢 Centres</button>
+    <button class="nav-tab" id="navUsers" onclick="changerOnglet('users')">👥 Responsables</button>
+    <button class="nav-tab" id="navEleves" onclick="changerOnglet('eleves')">👨‍🎓 Élèves</button>
+    <button class="nav-tab" id="navTransactions" onclick="changerOnglet('transactions')">💳 Transactions</button>
+  </div>
+
+  <!-- Onglet Centres -->
+  <div id="ongletCentres">
+    <div class="card">
+      <h3>➕ Créer un nouveau centre</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Nom du centre</label><input type="text" id="newCentreNom"></div>
+      </div>
+      <button class="btn btn-primary" onclick="creerCentre()">Créer le centre</button>
+    </div>
+    <div class="card">
+      <h3>📋 Liste des centres</h3>
+      <table><thead><tr><th>ID</th><th>Nom</th></tr></thead><tbody id="tbodyCentres"></tbody></table>
+    </div>
+  </div>
+
+  <!-- Onglet Responsables -->
+  <div id="ongletUsers" class="hidden">
+    <div class="card">
+      <h3>➕ Créer un responsable</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Nom</label><input type="text" id="newUserName"></div>
+        <div class="form-group"><label>Code d'accès</label><input type="text" id="newUserCode"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Centres gérés (Maintenez Ctrl pour en sélectionner plusieurs)</label>
+        <select id="newUserCentres" multiple style="height:100px; width:100%;"></select>
+      </div>
+      <button class="btn btn-primary" onclick="creerUtilisateur()">Créer le responsable</button>
+    </div>
+    <div class="card">
+      <h3>📋 Liste des responsables</h3>
+      <table><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Centres gérés</th></tr></thead><tbody id="tbodyUsers"></tbody></table>
+    </div>
   </div>
 
   <!-- Onglet Élèves -->
-  <div id="ongletEleves">
+  <div id="ongletEleves" class="hidden">
     <div class="card">
-      <h3>📋 Liste de tous les élèves inscrits</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">En tant qu'Admin, vous pouvez supprimer définitivement un élève.</p>
+      <h3>📋 Liste de tous les élèves</h3>
       <table>
         <thead><tr><th>ID</th><th>Nom</th><th>Centre</th><th>Matière</th><th>Payé</th><th>Action</th></tr></thead>
         <tbody id="tbodyEleves"><tr><td colspan="6">Chargement...</td></tr></tbody>
@@ -73,19 +114,23 @@ function apiHeaders() {
   return { 'Content-Type': 'application/json', 'x-code-acces': 'ADMIN2030' };
 }
 
-async function apiFetch(path, method = 'GET') {
-  const r = await fetch(API_BASE + path, { method, headers: apiHeaders() });
+async function apiFetch(path, method = 'GET', body = null) {
+  const opts = { method, headers: apiHeaders() };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API_BASE + path, opts);
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erreur API');
   return r.json();
 }
 
 window.onload = async function() {
+  await chargerCentres();
+  await chargerUtilisateurs();
   await chargerEleves();
   await chargerTransactions();
 };
 
 function changerOnglet(onglet) {
-  ['eleves', 'transactions'].forEach(o => {
+  ['centres', 'users', 'eleves', 'transactions'].forEach(o => {
     document.getElementById('nav' + o.charAt(0).toUpperCase() + o.slice(1)).classList.remove('active');
     document.getElementById('onglet' + o.charAt(0).toUpperCase() + o.slice(1)).classList.add('hidden');
   });
@@ -93,12 +138,67 @@ function changerOnglet(onglet) {
   document.getElementById('onglet' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.remove('hidden');
 }
 
+// --- GESTION DES CENTRES ---
+async function chargerCentres() {
+  const centres = await apiFetch('/api/centres');
+  
+  // Remplir le tableau
+  document.getElementById('tbodyCentres').innerHTML = centres.map(c => 
+    `<tr><td>${c.id}</td><td>${c.nom}</td></tr>`
+  ).join('');
+  
+  // Remplir le select multiple pour la création de responsable
+  const select = document.getElementById('newUserCentres');
+  select.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+}
+
+async function creerCentre() {
+  const nom = document.getElementById('newCentreNom').value;
+  if (!nom) return alert('Nom requis');
+  await apiFetch('/api/admin/centres', 'POST', { nom });
+  alert('✅ Centre créé !');
+  document.getElementById('newCentreNom').value = '';
+  await chargerCentres();
+}
+
+// --- GESTION DES UTILISATEURS ---
+async function chargerUtilisateurs() {
+  const users = await apiFetch('/api/responsables'); // Note: route à créer si elle n'existe pas
+  const tbody = document.getElementById('tbodyUsers');
+  if (!users || users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4">Aucun responsable trouvé.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = users.map(u => 
+    `<tr><td>${u.id}</td><td>${u.nom}</td><td>${u.code_acces}</td><td>${u.centres_noms || '-'}</td></tr>`
+  ).join('');
+}
+
+async function creerUtilisateur() {
+  const nom = document.getElementById('newUserName').value;
+  const code = document.getElementById('newUserCode').value;
+  
+  // Récupérer tous les centres sélectionnés
+  const select = document.getElementById('newUserCentres');
+  const centres_ids = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+
+  if (!nom || !code) return alert('Nom et Code requis');
+  
+  try {
+    await apiFetch('/api/admin/utilisateurs', 'POST', { nom, code_acces: code, centres_ids });
+    alert('✅ Responsable créé !');
+    document.getElementById('newUserName').value = '';
+    document.getElementById('newUserCode').value = '';
+    await chargerUtilisateurs();
+  } catch(e) { alert(e.message); }
+}
+
 // --- GESTION DES ÉLÈVES ---
 async function chargerEleves() {
   try {
     const eleves = await apiFetch('/api/etudiants');
     const tbody = document.getElementById('tbodyEleves');
-    if (eleves.length === 0) {
+    if (!eleves || eleves.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun élève inscrit.</td></tr>';
       return;
     }
@@ -130,7 +230,7 @@ async function chargerTransactions() {
   try {
     const transactions = await apiFetch('/api/admin/transactions');
     const tbody = document.getElementById('tbodyTransactions');
-    if (transactions.length === 0) {
+    if (!transactions || transactions.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucune transaction enregistrée.</td></tr>';
       return;
     }
