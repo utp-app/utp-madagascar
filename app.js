@@ -34,16 +34,19 @@ async function login() {
     
     // GESTION DES ACCÈS SELON LE RÔLE
     if (session.utilisateur.role === 'admin') {
+      $('#interface-admin-direction').style.display = 'block'; // Affiche la zone du bas
       $('#btn-admin').style.display = 'inline-block';
       $('#interface-responsable').style.display = 'none';
     } 
     else if (session.utilisateur.role === 'direction') {
+      $('#interface-admin-direction').style.display = 'block'; // Affiche la zone du bas
       $('#btn-direction').style.display = 'inline-block';
       $('#interface-responsable').style.display = 'none';
     } 
     else {
       // Responsable : on affiche son interface de travail
       $('#interface-responsable').style.display = 'block';
+      $('#interface-admin-direction').style.display = 'none'; // Cache totalement la zone du bas
       $('#btn-admin').style.display = 'none';
       $('#btn-direction').style.display = 'none';
       await init(); 
@@ -72,6 +75,7 @@ function logout() {
   document.getElementById('btn-admin').style.display = 'none';
   document.getElementById('btn-direction').style.display = 'none';
   document.getElementById('interface-responsable').style.display = 'none';
+  document.getElementById('interface-admin-direction').style.display = 'none';
 }
 
 function showTab(name) {
@@ -100,11 +104,6 @@ async function init() {
   }
 
   await chargerEtudiants();
-  // Vérifier si on doit ouvrir un onglet spécifique (ex: retour depuis badge)
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('tab') === 'etudiants') {
-    showTab('etudiants');
-  }
 }
 
 function majNiveaux() {
