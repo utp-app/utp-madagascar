@@ -7,28 +7,26 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
   body { background:#f4f7f6; padding:20px; display:flex; justify-content:center; }
-  .container { max-width:900px; width:100%; }
+  .container { max-width:1100px; width:100%; }
   .header { background:linear-gradient(135deg,#1A237E,#3949ab); color:white; padding:20px; border-radius:12px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; }
   .header h1 { font-size:20px; }
   .btn { padding:10px 18px; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px; }
   .btn-danger { background:#C62828; color:white; }
   .btn-primary { background:#00897B; color:white; }
+  .btn-back { background:#666; color:white; }
   
-  .nav-tabs { display:flex; gap:10px; margin-bottom:20px; }
-  .nav-tab { padding:12px 20px; background:white; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; color:#666; }
+  .nav-tabs { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+  .nav-tab { padding:12px 20px; background:white; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; color:#666; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
   .nav-tab.active { background:#1A237E; color:white; }
   
   .card { background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.05); }
   .card h3 { color:#1A237E; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px; }
   
-  .form-row { display:flex; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
-  .form-group { flex:1; min-width:200px; }
-  .form-group label { display:block; font-size:11px; font-weight:700; margin-bottom:4px; color:#333; }
-  .form-group input, .form-group select { width:100%; padding:10px; border:2px solid #e0e0e0; border-radius:8px; font-size:12px; }
-  
-  table { width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
-  th, td { padding:10px; text-align:left; border-bottom:1px solid #eee; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:12px; text-align:left; border-bottom:1px solid #eee; }
   th { background:#1A237E; color:white; }
+  tr:hover { background:#f1f8e9; }
+  
   .hidden { display:none !important; }
 </style>
 </head>
@@ -36,43 +34,35 @@
 <div class="container">
   <div class="header">
     <h1>⭐ Administration UTP</h1>
-    <button class="btn btn-danger" onclick="window.location.href='/'">Retour</button>
+    <button class="btn btn-back" onclick="window.location.href='/'">⬅️ Retour au menu</button>
   </div>
 
   <div class="nav-tabs">
-    <button class="nav-tab active" id="navCentres" onclick="changerOnglet('centres')">🏢 Centres</button>
-    <button class="nav-tab" id="navUsers" onclick="changerOnglet('users')">👥 Utilisateurs</button>
+    <button class="nav-tab active" id="navEleves" onclick="changerOnglet('eleves')">👨‍🎓 Tous les Élèves</button>
+    <button class="nav-tab" id="navTransactions" onclick="changerOnglet('transactions')">💳 Toutes les Transactions</button>
   </div>
 
-  <!-- Onglet Centres -->
-  <div id="ongletCentres">
+  <!-- Onglet Élèves -->
+  <div id="ongletEleves">
     <div class="card">
-      <h3>➕ Créer un nouveau centre</h3>
-      <div class="form-row">
-        <div class="form-group"><label>Nom du centre</label><input type="text" id="newCentreNom"></div>
-      </div>
-      <button class="btn btn-primary" onclick="creerCentre()">Créer le centre</button>
-    </div>
-    <div class="card">
-      <h3>📋 Liste des centres</h3>
-      <table><thead><tr><th>ID</th><th>Nom</th></tr></thead><tbody id="tbodyCentres"></tbody></table>
+      <h3>📋 Liste de tous les élèves inscrits</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">En tant qu'Admin, vous pouvez supprimer définitivement un élève.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Nom</th><th>Centre</th><th>Matière</th><th>Payé</th><th>Action</th></tr></thead>
+        <tbody id="tbodyEleves"><tr><td colspan="6">Chargement...</td></tr></tbody>
+      </table>
     </div>
   </div>
 
-  <!-- Onglet Utilisateurs -->
-  <div id="ongletUsers" class="hidden">
+  <!-- Onglet Transactions -->
+  <div id="ongletTransactions" class="hidden">
     <div class="card">
-      <h3>➕ Créer un utilisateur</h3>
-      <div class="form-row">
-        <div class="form-group"><label>Nom</label><input type="text" id="newUserName"></div>
-        <div class="form-group"><label>Code d'accès</label><input type="text" id="newUserCode"></div>
-        <div class="form-group"><label>Centre (Optionnel)</label><select id="newUserCentre"><option value="">Aucun</option></select></div>
-      </div>
-      <button class="btn btn-primary" onclick="creerUtilisateur()">Créer l'utilisateur</button>
-    </div>
-    <div class="card">
-      <h3>📋 Liste des utilisateurs</h3>
-      <table><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Centre</th></tr></thead><tbody id="tbodyUsers"></tbody></table>
+      <h3>💳 Historique de tous les paiements</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Si vous supprimez une transaction, le montant versé à la Direction et le badge de l'élève seront recalculés automatiquement.</p>
+      <table>
+        <thead><tr><th>Date</th><th>Élève</th><th>Centre</th><th>Montant</th><th>Mode</th><th>Action</th></tr></thead>
+        <tbody id="tbodyTransactions"><tr><td colspan="6">Chargement...</td></tr></tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -80,24 +70,22 @@
 <script>
 const API_BASE = '';
 function apiHeaders() {
-  return { 'Content-Type': 'application/json', 'x-code-acces': 'ADMIN2030' }; // Code admin
+  return { 'Content-Type': 'application/json', 'x-code-acces': 'ADMIN2030' };
 }
 
-async function apiFetch(path, method = 'GET', body = null) {
-  const opts = { method, headers: apiHeaders() };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(API_BASE + path, opts);
+async function apiFetch(path, method = 'GET') {
+  const r = await fetch(API_BASE + path, { method, headers: apiHeaders() });
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erreur API');
   return r.json();
 }
 
 window.onload = async function() {
-  await chargerCentres();
-  await chargerUtilisateurs();
+  await chargerEleves();
+  await chargerTransactions();
 };
 
 function changerOnglet(onglet) {
-  ['centres','users'].forEach(o => {
+  ['eleves', 'transactions'].forEach(o => {
     document.getElementById('nav' + o.charAt(0).toUpperCase() + o.slice(1)).classList.remove('active');
     document.getElementById('onglet' + o.charAt(0).toUpperCase() + o.slice(1)).classList.add('hidden');
   });
@@ -105,44 +93,68 @@ function changerOnglet(onglet) {
   document.getElementById('onglet' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.remove('hidden');
 }
 
-async function chargerCentres() {
-  const centres = await apiFetch('/api/centres');
-  document.getElementById('tbodyCentres').innerHTML = centres.map(c => 
-    `<tr><td>${c.id}</td><td>${c.nom}</td></tr>`
-  ).join('');
-  
-  const select = document.getElementById('newUserCentre');
-  select.innerHTML = '<option value="">Aucun</option>' + centres.map(c => 
-    `<option value="${c.id}">${c.nom}</option>`
-  ).join('');
+// --- GESTION DES ÉLÈVES ---
+async function chargerEleves() {
+  try {
+    const eleves = await apiFetch('/api/etudiants');
+    const tbody = document.getElementById('tbodyEleves');
+    if (eleves.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun élève inscrit.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = eleves.map(e => `
+      <tr>
+        <td><strong>${e.utp_id}</strong></td>
+        <td>${e.nom} ${e.prenom}</td>
+        <td>${e.centre_nom}</td>
+        <td>${e.matiere} (${e.niveau})</td>
+        <td>${e.montant_paye.toLocaleString()} Ar</td>
+        <td><button class="btn btn-danger" onclick="supprimerEleve(${e.id}, '${e.nom}')">🗑️ Supprimer</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
 }
 
-async function chargerUtilisateurs() {
-  const users = await apiFetch('/api/responsables');
-  document.getElementById('tbodyUsers').innerHTML = users.map(u => 
-    `<tr><td>${u.id}</td><td>${u.nom}</td><td>${u.code_acces}</td><td>${u.centre_nom || '-'}</td></tr>`
-  ).join('');
+async function supprimerEleve(id, nom) {
+  if (!confirm(`⚠️ ATTENTION ⚠️\n\nVoulez-vous vraiment supprimer DÉFINITIVEMENT l'élève ${nom} et TOUTES ses transactions ?\n\nCette action est irréversible.`)) return;
+  try {
+    await apiFetch('/api/admin/etudiants/' + id, 'DELETE');
+    alert('✅ Élève supprimé avec succès.');
+    await chargerEleves();
+    await chargerTransactions();
+  } catch(e) { alert(e.message); }
 }
 
-async function creerCentre() {
-  const nom = document.getElementById('newCentreNom').value;
-  if (!nom) return alert('Nom requis');
-  await apiFetch('/api/admin/centres', 'POST', { nom });
-  alert('✅ Centre créé !');
-  document.getElementById('newCentreNom').value = '';
-  await chargerCentres();
+// --- GESTION DES TRANSACTIONS ---
+async function chargerTransactions() {
+  try {
+    const transactions = await apiFetch('/api/admin/transactions');
+    const tbody = document.getElementById('tbodyTransactions');
+    if (transactions.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucune transaction enregistrée.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = transactions.map(t => `
+      <tr>
+        <td>${new Date(t.date_paiement).toLocaleString('fr-FR')}</td>
+        <td>${t.nom} ${t.prenom} (<strong>${t.utp_id}</strong>)</td>
+        <td>${t.centre_nom}</td>
+        <td style="color:#2E7D32; font-weight:bold;">${t.montant.toLocaleString()} Ar</td>
+        <td>${t.mode_paiement}</td>
+        <td><button class="btn btn-danger" onclick="supprimerTransaction(${t.id})">🗑️ Annuler</button></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
 }
 
-async function creerUtilisateur() {
-  const nom = document.getElementById('newUserName').value;
-  const code = document.getElementById('newUserCode').value;
-  const centre_id = document.getElementById('newUserCentre').value || null;
-  if (!nom || !code) return alert('Nom et Code requis');
-  await apiFetch('/api/admin/utilisateurs', 'POST', { nom, code_acces: code, centre_id });
-  alert('✅ Utilisateur créé !');
-  document.getElementById('newUserName').value = '';
-  document.getElementById('newUserCode').value = '';
-  await chargerUtilisateurs();
+async function supprimerTransaction(id) {
+  if (!confirm("⚠️ Voulez-vous vraiment annuler cette transaction ?\n\nLe montant versé à la Direction sera recalculé et le badge de l'élève pourra être retiré s'il n'a plus assez payé.")) return;
+  try {
+    const r = await apiFetch('/api/admin/transactions/' + id, 'DELETE');
+    alert(`✅ Transaction annulée.\nNouveau total payé par l'élève : ${r.nouveauMontant.toLocaleString()} Ar.`);
+    await chargerEleves();
+    await chargerTransactions();
+  } catch(e) { alert(e.message); }
 }
 </script>
 </body>
