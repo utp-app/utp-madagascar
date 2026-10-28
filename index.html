@@ -37,7 +37,7 @@
         <button onclick="showTab('etudiants')">Étudiants</button>
         <button onclick="showTab('paiements')">Paiements</button>
         <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
-        <!-- SEUL BOUTON DÉCONNEXION (en haut à droite) -->
+        <!-- SEUL BOUTON DÉCONNEXION POUR LE RESPONSABLE -->
         <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
       </nav>
 
@@ -59,7 +59,6 @@
           <thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Centre</th><th>Payé</th><th>Badge</th><th>Date</th></tr></thead>
           <tbody></tbody>
         </table>
-        <!-- SUPPRESSION DU BOUTON DÉCONNEXION ICI -->
       </div>
 
       <!-- Onglet Paiements -->
@@ -87,8 +86,9 @@
 
     <!-- ==============================================
          INTERFACE RÉSERVÉE À L'ADMIN ET LA DIRECTION 
+         (Caché par défaut, affiché par le JS)
          ============================================== -->
-    <div style="text-align:center; margin-top: 50px;">
+    <div id="interface-admin-direction" style="display:none; text-align:center; margin-top: 50px;">
       <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; padding: 20px; font-size: 18px; background:#00897B; color:white; border-radius:10px; cursor:pointer; margin:10px;">⚙️ Paramétrage Admin</button>
       
       <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; padding: 20px; font-size: 18px; background:#E65100; color:white; border-radius:10px; cursor:pointer; margin:10px;">⭐ Tableau de Bord Direction</button>
