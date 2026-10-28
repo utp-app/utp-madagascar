@@ -61,12 +61,13 @@
     <button class="nav-tab" id="navCompta" onclick="changerOnglet('compta')">💰 Comptabilité</button>
     <button class="nav-tab" id="navEleves" onclick="changerOnglet('eleves')">👨‍🎓 Élèves & PDF</button>
     <button class="nav-tab" id="navLivres" onclick="changerOnglet('livres')">📚 Commandes Livres</button>
+    <button class="nav-tab" id="navArchives" onclick="changerOnglet('archives')">🗄️ Archives</button>
   </div>
 
   <div id="ongletAppro">
     <div class="card">
       <h3>✅ Élèves en attente d'approbation pour le livre</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">Ces élèves ont payé les 20 000 Ar. Approuvez-les pour les passer en "Actif" et leur permettre de récupérer leur livre.</p>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Ces élèves ont payé les 20 000 Ar. Approuvez-les pour les passer en "Actif".</p>
       <table>
         <thead><tr><th>ID</th><th>Nom complet</th><th>Centre</th><th>Montant payé</th><th>Action</th></tr></thead>
         <tbody id="tbodyAppro"><tr><td colspan="5" class="loading">Chargement...</td></tr></tbody>
@@ -85,7 +86,6 @@
     </div>
   </div>
 
-  <!-- NOUVEL ONGLET COMMANDES LIVRES -->
   <div id="ongletLivres" class="hidden">
     <div class="card">
       <h3>📚 Commandes de livres reçues</h3>
@@ -94,6 +94,16 @@
         <thead><tr><th>Date</th><th>Centre</th><th>Nombre de livres</th><th>Montant (Ar)</th><th>Statut</th></tr></thead>
         <tbody id="tbodyLivres"><tr><td colspan="5" class="loading">Chargement...</td></tr></tbody>
       </table>
+    </div>
+  </div>
+
+  <!-- NOUVEL ONGLET ARCHIVES -->
+  <div id="ongletArchives" class="hidden">
+    <div class="card">
+      <h3>🗄️ Remise à zéro des listes</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Cette action va masquer de la liste principale tous les élèves ayant dépassé les 70 jours (Anglais/Français) ou 100 jours (Allemand/Chinois). <strong>Leurs ID seront conservés pour une future réinscription.</strong></p>
+      <button onclick="lancerArchivage()" style="padding:15px 30px; background:#C62828; color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;">⚠️ Lancer la remise à zéro</button>
+      <div id="resultatArchive" style="margin-top:15px; font-weight:bold;"></div>
     </div>
   </div>
 
@@ -123,7 +133,7 @@ window.onload = async function() {
 };
 
 function changerOnglet(onglet) {
-  ['appro','compta','eleves','livres'].forEach(o => {
+  ['appro','compta','eleves','livres','archives'].forEach(o => {
     document.getElementById('nav' + o.charAt(0).toUpperCase() + o.slice(1)).classList.remove('active');
     document.getElementById('onglet' + o.charAt(0).toUpperCase() + o.slice(1)).classList.add('hidden');
   });
@@ -247,6 +257,21 @@ async function chargerLivres() {
       </tr>
     `).join('');
   } catch(e) { console.error(e); }
+}
+
+// --- ARCHIVAGE (Remise à zéro) ---
+async function lancerArchivage() {
+  if (!confirm("⚠️ ATTENTION ⚠️\n\nVoulez-vous vraiment archiver tous les élèves expirés ?\n\nIls disparaîtront de la liste principale mais garderont leur ID.")) return;
+  
+  try {
+    const r = await apiFetch('/api/archiver-expires', 'POST');
+    document.getElementById('resultatArchive').innerHTML = `<span style="color:#2E7D32;">✅ ${r.message}</span>`;
+    // Rafraîchir les listes
+    await chargerApprobations();
+    await chargerElevesParCentre();
+  } catch (e) {
+    document.getElementById('resultatArchive').innerHTML = `<span style="color:#C62828;">❌ Erreur : ${e.message}</span>`;
+  }
 }
 </script>
 </body>
