@@ -8,32 +8,26 @@
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
   body { background:#f4f7f6; padding:20px; display:flex; justify-content:center; }
   .container { max-width:1100px; width:100%; }
-  
   .header { background:linear-gradient(135deg,#1A237E,#3949ab); color:white; padding:20px; border-radius:12px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 10px 30px rgba(26,35,126,0.3); }
   .header h1 { font-size:20px; }
   .btn { padding:10px 18px; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px; }
   .btn-danger { background:#C62828; color:white; }
   .btn-primary { background:#00897B; color:white; }
   .btn-cert { background:#6A1B9A; color:white; }
-
   .nav-tabs { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
   .nav-tab { padding:12px 20px; background:white; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; color:#666; box-shadow:0 2px 8px rgba(0,0,0,0.05); }
   .nav-tab.active { background:#1A237E; color:white; }
-
   .card { background:white; border-radius:12px; padding:20px; margin-bottom:20px; box-shadow:0 4px 15px rgba(0,0,0,0.05); }
   .card h3 { color:#1A237E; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px; }
-
   table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
   th, td { padding:12px; text-align:left; border-bottom:1px solid #eee; }
   th { background:#1A237E; color:white; }
   tr:hover { background:#f1f8e9; }
-
   .centre-card { background:white; border-radius:12px; margin-bottom:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border-left:5px solid #1A237E; overflow:hidden; }
   .centre-header { padding:20px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:#f8f9fa; }
   .centre-title { font-size:16px; font-weight:700; color:#1A237E; }
   .centre-body { display:none; padding:20px; }
   .centre-card.open .centre-body { display:block; }
-  
   .compta-stats { display:flex; gap:15px; margin-bottom:15px; }
   .stat-box { flex:1; padding:15px; border-radius:8px; text-align:center; }
   .stat-box .label { font-size:11px; font-weight:700; text-transform:uppercase; margin-bottom:5px; }
@@ -41,7 +35,6 @@
   .box-green { background:#E8F5E9; color:#2E7D32; border:1px solid #C8E6C9; }
   .box-red { background:#FFEBEE; color:#C62828; border:1px solid #FFCDD2; }
   .box-blue { background:#E3F2FD; color:#1565C0; border:1px solid #BBDEFB; }
-
   .hidden { display:none !important; }
   .loading { text-align:center; padding:40px; color:#999; }
 </style>
@@ -61,7 +54,6 @@
     <button class="nav-tab" id="navCompta" onclick="changerOnglet('compta')">💰 Comptabilité</button>
     <button class="nav-tab" id="navEleves" onclick="changerOnglet('eleves')">👨‍🎓 Élèves & PDF</button>
     <button class="nav-tab" id="navLivres" onclick="changerOnglet('livres')">📚 Commandes Livres</button>
-    <button class="nav-tab" id="navArchives" onclick="changerOnglet('archives')">🗄️ Archives</button>
   </div>
 
   <div id="ongletAppro">
@@ -96,17 +88,6 @@
       </table>
     </div>
   </div>
-
-  <!-- NOUVEL ONGLET ARCHIVES -->
-  <div id="ongletArchives" class="hidden">
-    <div class="card">
-      <h3>🗄️ Remise à zéro des listes</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">Cette action va masquer de la liste principale tous les élèves ayant dépassé les 70 jours (Anglais/Français) ou 100 jours (Allemand/Chinois). <strong>Leurs ID seront conservés pour une future réinscription.</strong></p>
-      <button onclick="lancerArchivage()" style="padding:15px 30px; background:#C62828; color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;">⚠️ Lancer la remise à zéro</button>
-      <div id="resultatArchive" style="margin-top:15px; font-weight:bold;"></div>
-    </div>
-  </div>
-
 </div>
 
 <script>
@@ -116,7 +97,6 @@ function apiHeaders() {
   sessionStorage.setItem('utp_code', code);
   return { 'Content-Type': 'application/json', 'x-code-acces': code };
 }
-
 async function apiFetch(path, method = 'GET', body = null) {
   const opts = { method, headers: apiHeaders() };
   if (body) opts.body = JSON.stringify(body);
@@ -124,82 +104,44 @@ async function apiFetch(path, method = 'GET', body = null) {
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erreur API');
   return r.json();
 }
-
 window.onload = async function() {
   await chargerApprobations();
   await chargerCompta();
   await chargerElevesParCentre();
   await chargerLivres();
 };
-
 function changerOnglet(onglet) {
-  ['appro','compta','eleves','livres','archives'].forEach(o => {
+  ['appro','compta','eleves','livres'].forEach(o => {
     document.getElementById('nav' + o.charAt(0).toUpperCase() + o.slice(1)).classList.remove('active');
     document.getElementById('onglet' + o.charAt(0).toUpperCase() + o.slice(1)).classList.add('hidden');
   });
   document.getElementById('nav' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.add('active');
   document.getElementById('onglet' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.remove('hidden');
 }
-
-// --- APPROBATION DES LIVRES ---
 async function chargerApprobations() {
   try {
     const eleves = await apiFetch('/api/etudiants');
     const enAttente = eleves.filter(e => e.montant_paye >= 20000 && e.statut !== 'actif');
-    
     const tbody = document.getElementById('tbodyAppro');
-    if (enAttente.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun élève en attente.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = enAttente.map(e => `
-      <tr>
-        <td><strong>${e.utp_id}</strong></td>
-        <td>${e.nom} ${e.prenom}</td>
-        <td>${e.centre_nom}</td>
-        <td style="color:#2E7D32; font-weight:bold;">${e.montant_paye.toLocaleString()} Ar</td>
-        <td><button class="btn btn-primary" onclick="approuverLivre(${e.id})">✅ Approuver</button></td>
-      </tr>
-    `).join('');
+    if (enAttente.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucun élève en attente.</td></tr>'; return; }
+    tbody.innerHTML = enAttente.map(e => `<tr><td><strong>${e.utp_id}</strong></td><td>${e.nom} ${e.prenom}</td><td>${e.centre_nom}</td><td style="color:#2E7D32; font-weight:bold;">${e.montant_paye.toLocaleString()} Ar</td><td><button class="btn btn-primary" onclick="approuverLivre(${e.id})">✅ Approuver</button></td></tr>`).join('');
   } catch(e) { console.error(e); }
 }
-
 async function approuverLivre(id) {
   if (!confirm("Confirmer la remise du livre ? L'élève passera en statut Actif.")) return;
-  try {
-    await apiFetch('/api/etudiants/' + id + '/valider-livre', 'POST');
-    alert('✅ Livre approuvé avec succès !');
-    await chargerApprobations();
-  } catch(e) { alert(e.message); }
+  try { await apiFetch('/api/etudiants/' + id + '/valider-livre', 'POST'); alert('✅ Livre approuvé avec succès !'); await chargerApprobations(); } catch(e) { alert(e.message); }
 }
-
-// --- COMPTABILITÉ ---
 async function chargerCompta() {
   try {
     const compta = await apiFetch('/api/direction/compta-detaillee');
     let html = '';
     compta.forEach(c => {
       let soldeColor = c.solde >= 0 ? '#2E7D32' : '#C62828';
-      html += `
-        <div class="centre-card">
-          <div class="centre-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="centre-title">🏢 ${c.nom}</div>
-            <div style="font-weight:900; color:${soldeColor};">Solde : ${c.solde.toLocaleString()} Ar</div>
-          </div>
-          <div class="centre-body">
-            <div class="compta-stats">
-              <div class="stat-box box-green"><div class="label">Recettes</div><div class="value">+${c.recettes.toLocaleString()} Ar</div></div>
-              <div class="stat-box box-red"><div class="label">Dépenses</div><div class="value">-${c.depenses.toLocaleString()} Ar</div></div>
-              <div class="stat-box box-blue"><div class="label">Solde</div><div class="value">${c.solde.toLocaleString()} Ar</div></div>
-            </div>
-          </div>
-        </div>`;
+      html += `<div class="centre-card"><div class="centre-header" onclick="this.parentElement.classList.toggle('open')"><div class="centre-title">🏢 ${c.nom}</div><div style="font-weight:900; color:${soldeColor};">Solde : ${c.solde.toLocaleString()} Ar</div></div><div class="centre-body"><div class="compta-stats"><div class="stat-box box-green"><div class="label">Recettes</div><div class="value">+${c.recettes.toLocaleString()} Ar</div></div><div class="stat-box box-red"><div class="label">Dépenses</div><div class="value">-${c.depenses.toLocaleString()} Ar</div></div><div class="stat-box box-blue"><div class="label">Solde</div><div class="value">${c.solde.toLocaleString()} Ar</div></div></div></div></div>`;
     });
     document.getElementById('listeCompta').innerHTML = html;
   } catch(e) { document.getElementById('listeCompta').innerHTML = `<div style="color:red; text-align:center;">Erreur : ${e.message}</div>`; }
 }
-
-// --- ÉLÈVES PAR CENTRE & PDF ---
 async function chargerElevesParCentre() {
   try {
     const eleves = await apiFetch('/api/etudiants');
@@ -207,25 +149,11 @@ async function chargerElevesParCentre() {
     let html = '';
     centres.forEach(c => {
       const elevesCentre = eleves.filter(e => e.centre_id === c.id);
-      html += `
-        <div class="centre-card">
-          <div class="centre-header" onclick="this.parentElement.classList.toggle('open')">
-            <div class="centre-title">🏢 ${c.nom} <span style="background:#1A237E; color:white; padding:2px 8px; border-radius:10px; font-size:12px;">${elevesCentre.length}</span></div>
-            <div>▼</div>
-          </div>
-          <div class="centre-body">
-            <button class="btn btn-danger" onclick="telechargerPDFCentre(${c.id}, '${c.nom}')" style="margin-bottom:15px;">🖨️ Télécharger la liste (PDF)</button>
-            <table>
-              <thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Date d'entrée</th></tr></thead>
-              <tbody>${elevesCentre.map(e => `<tr><td>${e.utp_id}</td><td>${e.nom} ${e.prenom}</td><td>${e.matiere}</td><td>${e.niveau}</td><td>${e.date_entree}</td></tr>`).join('')}</tbody>
-            </table>
-          </div>
-        </div>`;
+      html += `<div class="centre-card"><div class="centre-header" onclick="this.parentElement.classList.toggle('open')"><div class="centre-title">🏢 ${c.nom} <span style="background:#1A237E; color:white; padding:2px 8px; border-radius:10px; font-size:12px;">${elevesCentre.length}</span></div><div>▼</div></div><div class="centre-body"><button class="btn btn-danger" onclick="telechargerPDFCentre(${c.id}, '${c.nom}')" style="margin-bottom:15px;">🖨️ Télécharger la liste (PDF)</button><table><thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Date d'entrée</th></tr></thead><tbody>${elevesCentre.map(e => `<tr><td>${e.utp_id}</td><td>${e.nom} ${e.prenom}</td><td>${e.matiere}</td><td>${e.niveau}</td><td>${e.date_entree}</td></tr>`).join('')}</tbody></table></div></div>`;
     });
     document.getElementById('listeCentresPDF').innerHTML = html;
   } catch(e) { console.error(e); }
 }
-
 async function telechargerPDFCentre(centreId, nomCentre) {
   const eleves = await apiFetch('/api/etudiants');
   const elevesCentre = eleves.filter(e => e.centre_id === centreId);
@@ -233,45 +161,15 @@ async function telechargerPDFCentre(centreId, nomCentre) {
   let html = `<html><head><title>Liste ${nomCentre}</title><style>body { font-family: Arial; padding: 20px; } h1 { color: #1A237E; text-align: center; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th { background: #1A237E; color: white; padding: 10px; } td { padding: 10px; border-bottom: 1px solid #ddd; } @media print { button { display: none; } }</style></head><body><h1>UTP Madagascar - Élèves du centre ${nomCentre}</h1><button onclick="window.print()" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">🖨️ Imprimer en PDF</button><table><thead><tr><th>ID UTP</th><th>Nom complet</th><th>Matière</th><th>Niveau</th><th>Date d'entrée</th></tr></thead><tbody>`;
   elevesCentre.forEach(e => { html += `<tr><td>${e.utp_id}</td><td>${e.nom} ${e.prenom}</td><td>${e.matiere}</td><td>${e.niveau}</td><td>${e.date_entree}</td></tr>`; });
   html += `</tbody></table></body></html>`;
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
+  const win = window.open('', '_blank'); win.document.write(html); win.document.close();
 }
-
-// --- COMMANDES LIVRES ---
 async function chargerLivres() {
   try {
     const livres = await apiFetch('/api/direction/livres');
     const tbody = document.getElementById('tbodyLivres');
-    if (livres.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune commande pour le moment.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = livres.map(l => `
-      <tr>
-        <td>${new Date(l.date_commande).toLocaleDateString('fr-FR')}</td>
-        <td>${l.centre_nom}</td>
-        <td>${l.nombre_livres}</td>
-        <td style="color:#2E7D32; font-weight:bold;">${l.montant_total.toLocaleString()} Ar</td>
-        <td>${l.statut === 'valide' ? '✅ Validé' : '⏳ En attente'}</td>
-      </tr>
-    `).join('');
+    if (livres.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune commande pour le moment.</td></tr>'; return; }
+    tbody.innerHTML = livres.map(l => `<tr><td>${new Date(l.date_commande).toLocaleDateString('fr-FR')}</td><td>${l.centre_nom}</td><td>${l.nombre_livres}</td><td style="color:#2E7D32; font-weight:bold;">${l.montant_total.toLocaleString()} Ar</td><td>${l.statut === 'valide' ? '✅ Validé' : '⏳ En attente'}</td></tr>`).join('');
   } catch(e) { console.error(e); }
-}
-
-// --- ARCHIVAGE (Remise à zéro) ---
-async function lancerArchivage() {
-  if (!confirm("⚠️ ATTENTION ⚠️\n\nVoulez-vous vraiment archiver tous les élèves expirés ?\n\nIls disparaîtront de la liste principale mais garderont leur ID.")) return;
-  
-  try {
-    const r = await apiFetch('/api/archiver-expires', 'POST');
-    document.getElementById('resultatArchive').innerHTML = `<span style="color:#2E7D32;">✅ ${r.message}</span>`;
-    // Rafraîchir les listes
-    await chargerApprobations();
-    await chargerElevesParCentre();
-  } catch (e) {
-    document.getElementById('resultatArchive').innerHTML = `<span style="color:#C62828;">❌ Erreur : ${e.message}</span>`;
-  }
 }
 </script>
 </body>
