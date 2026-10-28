@@ -23,12 +23,15 @@ async function api(path, method = 'GET', body = null) {
 // --- AUTHENTIFICATION ---
 async function login() {
   const code = $('#code-input').value.trim();
+  $('#code-input').value = ''; // <--- VIDE LE CHAMP IMMÉDIATEMENT
+
+  if (!code) return;
+
   try {
     const data = await api('/api/login', 'POST', { code });
     session = data;
     
     // Sauvegarde de la session pour le retour depuis la page Badge
-    sessionStorage.setItem('utp_code', code);
     sessionStorage.setItem('utp_session_data', JSON.stringify(data));
     
     afficherInterface();
@@ -37,13 +40,12 @@ async function login() {
   }
 }
 
-// --- AFFICHAGE DE L'INTERFACE (Factorisé) ---
+// --- AFFICHAGE DE L'INTERFACE ---
 async function afficherInterface() {
   $('#login-screen').classList.remove('active');
   $('#main-screen').classList.add('active');
   $('#user-info').textContent = `${session.utilisateur.nom} (${session.utilisateur.role})`;
   
-  // GESTION DES ACCÈS SELON LE RÔLE
   if (session.utilisateur.role === 'admin') {
     $('#interface-admin-direction').style.display = 'block';
     $('#btn-admin').style.display = 'inline-block';
@@ -55,23 +57,22 @@ async function afficherInterface() {
     $('#interface-responsable').style.display = 'none';
   } 
   else {
-    // Responsable : on affiche son interface de travail
     $('#interface-responsable').style.display = 'block';
     $('#interface-admin-direction').style.display = 'none';
     $('#btn-admin').style.display = 'none';
     $('#btn-direction').style.display = 'none';
     
-    // On charge les données uniquement si l'interface est vide
+    // Charger les données si ce n'est pas déjà fait
     if (centres.length === 0) {
       await init(); 
     }
     
-    // Si on revient de la page badge (/?tab=etudiants), on ouvre le bon onglet
+    // Ouvrir le bon onglet (ex: ?tab=etudiants)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('tab') === 'etudiants') {
       showTab('etudiants');
     } else {
-      showTab('etudiants'); // Par défaut, on ouvre "Étudiants"
+      showTab('etudiants');
     }
   }
 }
