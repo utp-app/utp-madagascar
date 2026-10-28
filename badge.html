@@ -57,7 +57,6 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
 
 .bc-id-box { position:absolute; top: 89%; left: 50%; transform:translateX(-50%); background: #fff; color: #1A237E; padding: 4px 15px; border-radius: 20px; font-size:12px; font-weight:900; font-family:monospace; border: 2px solid #C62828; }
 
-
 /* =========================================
    BADGE INTELLO (Format Paysage)
    ========================================= */
@@ -76,7 +75,6 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
 .bi-id { position:absolute; left: 25%; top: 73%; width: 40%; font-size: 14px; font-weight: 900; color: #1A237E; font-family: monospace; }
 .bi-qr-box { position:absolute; left: 5%; bottom: 8%; width: 80px; height: 80px; background: white; padding: 2px; }
 #qr-code-container-intello { width: 76px; height: 76px; }
-
 
 @media print {
   @page { size: A7 portrait; margin: 0; }
@@ -146,7 +144,9 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
   <button class="btn-photo" onclick="document.getElementById('fileInput').click()">📁 Choisir une image</button>
 
   <button class="btn btn-primary" id="btnGenerer" onclick="genererBadge()" disabled>🎫 Générer le Badge</button>
-  <button class="btn btn-secondary" onclick="window.location.href='/'">⬅️ Retour</button>
+  
+  <!-- BOUTON RETOUR MODIFIÉ POUR ALLER SUR L'ONGLET ÉTUDIANTS -->
+  <button class="btn btn-secondary" onclick="window.location.href='/?tab=etudiants'">⬅️ Retour à l'inscription</button>
 
   <div id="previewContainer" class="preview-container">
     <h3 style="color:#1A237E; margin-bottom:15px;">Aperçu du Badge</h3>
@@ -190,8 +190,8 @@ var qrCodeInstanceC = null;
 var qrCodeInstanceI = null;
 var badgeType = null;
 
-// Configuration du montant total (pour le calcul du reste à payer)
-const MONTANT_TOTAL = 50000; // À ajuster selon votre tarif
+// Montant total (pour le calcul du reste à payer)
+const MONTANT_TOTAL = 50000; 
 
 const API_BASE = '';
 function apiHeaders() {
@@ -214,7 +214,7 @@ function calculerDateExpiration(dateEntree, matiere) {
   } else {
     d.setMonth(d.getMonth() + 3);
   }
-  d.setDate(d.getDate() + 15); // Ajoute 15 jours de marge après l'examen
+  d.setDate(d.getDate() + 15);
   return d.toLocaleDateString('fr-FR');
 }
 
@@ -244,8 +244,6 @@ async function chercherEleve() {
     document.getElementById('centreBadge').value = found.centre_nom;
     document.getElementById('niveauBadge').value = found.niveau;
     document.getElementById('idBadge').value = found.utp_id;
-    
-    // Calcul de la date d'expiration
     document.getElementById('dateExpiration').value = calculerDateExpiration(found.date_entree, found.matiere);
 
     status.textContent = "✅ Élève trouvé : " + found.nom;
@@ -317,11 +315,9 @@ function genererBadge() {
   var centre = document.getElementById('centreBadge').value.trim();
   var dateExp = document.getElementById('dateExpiration').value;
 
-  // Calcul du reste à payer
   var resteAPayer = MONTANT_TOTAL - eleveActuel.montant_paye;
   var statutPaiement = resteAPayer > 0 ? `Reste à payer : ${resteAPayer} Ar` : "Soldé";
 
-  // Contenu du QR Code (vCard standard avec les infos demandées)
   var qrData = `BEGIN:VCARD
 VERSION:3.0
 N:${nom};${prenom};;;
@@ -331,11 +327,9 @@ TITLE:${id}
 NOTE:Statut paiement: ${statutPaiement}\nExpire le: ${dateExp}
 END:VCARD`;
 
-  // Nettoyage
   if (qrCodeInstanceC) { qrCodeInstanceC = null; document.getElementById('qr-code-container-classique').innerHTML = ''; }
   if (qrCodeInstanceI) { qrCodeInstanceI = null; document.getElementById('qr-code-container-intello').innerHTML = ''; }
 
-  // QR Classique
   qrCodeInstanceC = new QRCodeStyling({
     width: 200, height: 200, data: qrData,
     image: "logo.png",
@@ -344,7 +338,6 @@ END:VCARD`;
   });
   qrCodeInstanceC.append(document.getElementById('qr-code-container-classique'));
 
-  // QR Intello
   qrCodeInstanceI = new QRCodeStyling({
     width: 200, height: 200, data: qrData,
     dotsOptions: { color: "#1A237E", type: "square" },
@@ -375,7 +368,7 @@ function imprimerBadge() {
       win.document.write(`
         <html><head><title>Badge UTP</title>
         <style>@page { size: A7; margin: 0; } body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; } img { max-width: 100%; max-height: 100%; } @media print { body { background: white; } img { width: 100%; } }</style></head>
-        <body><img src="${dateUrl}" onload="window.print();"></body></html>
+        <body><img src="${dataUrl}" onload="window.print();"></body></html>
       `);
       win.document.close();
     });
