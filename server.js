@@ -20,17 +20,6 @@ function genUtpId() {
   return 'UTP-' + next;
 }
 
-// Calcul de la date d'examen selon les règles (+2 mois ou +3 mois)
-function calculDateExamen(dateEntree, matiere) {
-  const d = new Date(dateEntree);
-  if (matiere === 'Anglais' || matiere === 'Français') {
-    d.setMonth(d.getMonth() + 2); // +2 mois
-  } else {
-    d.setMonth(d.getMonth() + 3); // +3 mois
-  }
-  return d.toISOString().slice(0, 10);
-}
-
 function authRole(req, res, next) {
   const code = req.headers['x-code-acces'] || req.query.code;
   if (!code) return res.status(401).json({ error: 'Code d\'accès manquant' });
@@ -69,11 +58,15 @@ app.get('/api/etudiants', authRole, (req, res) => {
   } else {
     rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id WHERE e.centre_id = ?`).all(u.centre_id);
   }
-  // Ajout de la date d'examen calculée
-  res.json(rows.map(e => ({ ...e, date_examen: calculDateExamen(e.date_entree, e.matiere) })));
+  res.json(rows);
 });
 
+// ---- SÉCURITÉ : SEUL LE RESPONSABLE PEUT INSCRIRE ----
 app.post('/api/etudiants', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'responsable') {
+    return res.status(403).json({ error: 'Seul un responsable de centre peut inscrire un élève.' });
+  }
+
   const { nom, prenom, telephone, matiere, niveau, centre_id, date_entree } = req.body;
   const utp_id = genUtpId();
   const info = db.prepare(`INSERT INTO etudiants (utp_id, nom, prenom, telephone, matiere, niveau, centre_id, date_entree) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -95,42 +88,6 @@ app.post('/api/paiements', authRole, (req, res) => {
 
   db.prepare('UPDATE etudiants SET montant_paye = ?, badge_genere = ? WHERE id = ?').run(nouveauMontant, badge, etudiant_id);
   res.json({ ticket_ref, montant, nouveauMontant, badge_genere: badge });
-});
-
-app.post('/api/notes', authRole, (req, res) => {
-  const { etudiant_id, detail, total } = req.body;
-  const etudiant = db.prepare('SELECT * FROM etudiants WHERE id = ?').get(etudiant_id);
-  
-  let appreciation = '';
-  if (etudiant.matiere === 'Français') {
-    if (total < 50) appreciation = 'Repêchage';
-    else if (total <= 60) appreciation = 'Passable';
-    else if (total <= 69) appreciation = 'Assez Bien';
-    else if (total <= 79) appreciation = 'Bien';
-    else if (total <= 89) appreciation = 'Très Bien';
-    else appreciation = 'Excellent';
-  } else {
-    if (total < 50) appreciation = 'Repêchage';
-    else if (total <= 60) appreciation = 'Fair';
-    else if (total <= 69) appreciation = 'Good Enough';
-    else if (total <= 79) appreciation = 'Good';
-    else if (total <= 89) appreciation = 'Very Good';
-    else appreciation = 'Excellent';
-  }
-
-  db.prepare(`INSERT INTO notes (etudiant_id, matiere, total, appreciation, detail_json) VALUES (?, ?, ?, ?, ?)`)
-    .run(etudiant_id, etudiant.matiere, total, appreciation, JSON.stringify(detail));
-
-  // Passage automatique au niveau supérieur si note >= 50
-  if (total >= 50) {
-    const niveaux = MATIERES_NIVEAUX[etudiant.matiere];
-    const idx = niveaux.indexOf(etudiant.niveau);
-    if (idx >= 0 && idx < niveaux.length - 1) {
-      db.prepare('UPDATE etudiants SET niveau = ? WHERE id = ?').run(niveaux[idx + 1], etudiant.id);
-    }
-  }
-
-  res.json({ total, appreciation });
 });
 
 app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
