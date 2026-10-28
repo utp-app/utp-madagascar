@@ -240,4 +240,8 @@ async function commanderLivres() {
   
   try {
     const r = await api('/api/livres/commander', 'POST', { nombre_livres: nombre, centre_id });
-    alert(`✅ Commande envoyée à la Direction !\nMontant : ${r.montant_total.toLocaleString()} Ar\n\nCet argent a été dédu
+    alert(`✅ Commande envoyée à la Direction !\nMontant : ${r.montant_total.toLocaleString()} Ar\n\nCet argent a été déduit de votre caisse.`);
+    $('#l-nombre').value = '';
+    $('#l-total').value = '';
+  } catch (e) { alert(e.message); }
+}
