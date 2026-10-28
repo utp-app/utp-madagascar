@@ -23,7 +23,7 @@ async function api(path, method = 'GET', body = null) {
 // --- AUTHENTIFICATION ---
 async function login() {
   const code = $('#code-input').value.trim();
-  $('#code-input').value = ''; // Vide le champ immédiatement
+  $('#code-input').value = ''; // Vide le champ immédiatement pour la sécurité
 
   if (!code) return;
 
@@ -40,7 +40,7 @@ async function login() {
   }
 }
 
-// --- AFFICHAGE DE L'INTERFACE ---
+// --- AFFICHAGE DE L'INTERFACE (CORRIGÉ) ---
 async function afficherInterface() {
   $('#login-screen').classList.remove('active');
   $('#main-screen').classList.add('active');
@@ -48,15 +48,20 @@ async function afficherInterface() {
   
   if (session.utilisateur.role === 'admin') {
     $('#interface-admin-direction').style.display = 'block';
-    $('#btn-admin').style.display = 'inline-block';
     $('#interface-responsable').style.display = 'none';
+    // Affiche Admin et cache Direction
+    $('#btn-admin').style.display = 'inline-block';
+    $('#btn-direction').style.display = 'none'; 
   } 
   else if (session.utilisateur.role === 'direction') {
     $('#interface-admin-direction').style.display = 'block';
-    $('#btn-direction').style.display = 'inline-block';
     $('#interface-responsable').style.display = 'none';
+    // Affiche Direction et cache Admin
+    $('#btn-admin').style.display = 'none';
+    $('#btn-direction').style.display = 'inline-block'; 
   } 
   else {
+    // Responsable : on affiche son interface de travail
     $('#interface-responsable').style.display = 'block';
     $('#interface-admin-direction').style.display = 'none';
     $('#btn-admin').style.display = 'none';
@@ -93,7 +98,7 @@ function logout() {
   document.getElementById('interface-responsable').style.display = 'none';
   document.getElementById('interface-admin-direction').style.display = 'none';
   
-  // 4. Vider le champ de connexion
+  // 4. Vider le champ de connexion et les erreurs
   document.getElementById('code-input').value = '';
   document.getElementById('login-error').textContent = '';
   
