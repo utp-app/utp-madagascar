@@ -19,13 +19,32 @@ async function login() {
   try {
     const data = await api('/api/login', 'POST', { code });
     session = data;
+    sessionStorage.setItem('utp_code', code);
+    
     $('#login-screen').classList.remove('active');
     $('#main-screen').classList.add('active');
     $('#user-info').textContent = `${session.utilisateur.nom} (${session.utilisateur.role})`;
-    if (session.utilisateur.role === 'admin') $('#btn-admin').style.display = '';
-    if (session.utilisateur.role === 'direction') $('#btn-direction').style.display = '';
+    
+    // GESTION DES ACCÈS SELON LE RÔLE
+    if (session.utilisateur.role === 'admin') {
+      // L'admin ne voit QUE le bouton Admin
+      document.getElementById('nav-responsable').style.display = 'none';
+      document.getElementById('btn-admin').style.display = 'inline-block';
+    } 
+    else if (session.utilisateur.role === 'direction') {
+      // La direction ne voit QUE le bouton Direction
+      document.getElementById('nav-responsable').style.display = 'none';
+      document.getElementById('btn-direction').style.display = 'inline-block';
+    } 
+    else {
+      // Le responsable ne voit QUE ses outils
+      document.getElementById('nav-responsable').style.display = 'flex';
+    }
+
     await init();
-  } catch (e) { $('#login-error').textContent = e.message; }
+  } catch (e) { 
+    $('#login-error').textContent = e.message; 
+  }
 }
 
 function logout() { session = null; location.reload(); }
