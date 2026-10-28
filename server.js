@@ -5,7 +5,7 @@ const db = require('./db');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static('.'));
 
 const MATIERES_NIVEAUX = {
   Anglais: ['L1', 'L2', 'L3', 'L4'],
