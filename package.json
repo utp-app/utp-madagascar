@@ -1,7 +1,6 @@
 {
   "name": "utp-app",
   "version": "1.0.0",
-  "description": "Application UTP",
   "main": "server.js",
   "scripts": {
     "start": "node importer.js && node server.js"
