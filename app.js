@@ -25,29 +25,27 @@ async function login() {
     $('#main-screen').classList.add('active');
     $('#user-info').textContent = `${session.utilisateur.nom} (${session.utilisateur.role})`;
     
-    // GESTION DES ACCÈS SELON LE RÔLE
+    // AFFICHAGE SÉCURISÉ SELON LE RÔLE
     if (session.utilisateur.role === 'admin') {
-      // L'admin ne voit QUE le bouton Admin
-      document.getElementById('nav-responsable').style.display = 'none';
-      document.getElementById('btn-admin').style.display = 'inline-block';
+      $('#btn-admin').style.display = 'inline-block';
     } 
     else if (session.utilisateur.role === 'direction') {
-      // La direction ne voit QUE le bouton Direction
-      document.getElementById('nav-responsable').style.display = 'none';
-      document.getElementById('btn-direction').style.display = 'inline-block';
+      $('#btn-direction').style.display = 'inline-block';
     } 
     else {
-      // Le responsable ne voit QUE ses outils
-      document.getElementById('nav-responsable').style.display = 'flex';
+      $('#interface-responsable').style.display = 'block';
+      await init(); // Chargement des données uniquement pour le responsable
     }
-
-    await init();
   } catch (e) { 
     $('#login-error').textContent = e.message; 
   }
 }
 
-function logout() { session = null; location.reload(); }
+function logout() { 
+  session = null; 
+  sessionStorage.removeItem('utp_code');
+  location.reload(); 
+}
 
 function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -66,14 +64,18 @@ async function init() {
 
   const fillCentres = (id) => {
     const sel = $(id);
+    if(!sel) return;
     sel.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+    if (session.centre) sel.value = session.centre.id;
   };
   fillCentres('#e-centre');
 
   const matSel = $('#e-matiere');
-  matSel.innerHTML = Object.keys(matieres).map(m => `<option>${m}</option>`).join('');
-  matSel.onchange = () => majNiveaux();
-  majNiveaux();
+  if (matSel) {
+    matSel.innerHTML = Object.keys(matieres).map(m => `<option>${m}</option>`).join('');
+    matSel.onchange = () => majNiveaux();
+    majNiveaux();
+  }
 
   await chargerEtudiants();
 }
@@ -84,24 +86,27 @@ function majNiveaux() {
 }
 
 async function chargerEtudiants() {
-  const rows = await api('/api/etudiants');
-  const tbody = $('#table-etudiants tbody');
-  tbody.innerHTML = rows.map(e => `
-    <tr>
-      <td>${e.utp_id}</td>
-      <td>${e.nom} ${e.prenom}</td>
-      <td>${e.matiere}</td>
-      <td>${e.niveau}</td>
-      <td>${e.centre_nom}</td>
-      <td>${e.montant_paye.toLocaleString()} Ar</td>
-      <td>${e.badge_genere ? '✅' : '❌'}</td>
-      <td>${e.date_examen}</td>
-    </tr>
-  `).join('');
+  try {
+    const rows = await api('/api/etudiants');
+    const tbody = $('#table-etudiants tbody');
+    if (!tbody) return;
 
-  const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom}</option>`).join('');
-  $('#p-etudiant').innerHTML = opts;
-  $('#n-etudiant').innerHTML = opts;
+    tbody.innerHTML = rows.map(e => `
+      <tr>
+        <td>${e.utp_id}</td>
+        <td>${e.nom} ${e.prenom}</td>
+        <td>${e.matiere}</td>
+        <td>${e.niveau}</td>
+        <td>${e.centre_nom}</td>
+        <td>${e.montant_paye.toLocaleString()} Ar</td>
+        <td>${e.badge_genere ? '✅' : '❌'}</td>
+        <td>${e.date_entree}</td>
+      </tr>
+    `).join('');
+
+    const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom}</option>`).join('');
+    if ($('#p-etudiant')) $('#p-etudiant').innerHTML = opts;
+  } catch (e) { console.error(e); }
 }
 
 async function ajouterEtudiant() {
@@ -132,7 +137,7 @@ async function ajouterPaiement() {
   try {
     const r = await api('/api/paiements', 'POST', { etudiant_id, montant, tranche, mode_paiement, reference });
     
-    // Génération du ticket de caisse (HTML)
+    // Génération du ticket
     const eleve = await api('/api/etudiants').then(rows => rows.find(e => e.id === etudiant_id));
     const ticketHTML = `
       <html><head><style>
