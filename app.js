@@ -4,14 +4,11 @@ let matieres = {};
 
 const $ = (sel) => document.querySelector(sel);
 
-// --- API FETCH ---
 async function api(path, method = 'GET', body = null) {
   const headers = { 'Content-Type': 'application/json' };
   if (session) headers['x-code-acces'] = session.utilisateur.code_acces;
-  
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
-  
   const r = await fetch(path, opts);
   if (!r.ok) {
     const err = await r.json().catch(() => ({ error: 'Erreur inconnue' }));
@@ -20,27 +17,21 @@ async function api(path, method = 'GET', body = null) {
   return r.json();
 }
 
-// --- AUTHENTIFICATION ---
 async function login() {
   const code = $('#code-input').value.trim();
-  $('#code-input').value = ''; // <--- VIDE LE CHAMP IMMÉDIATEMENT
-
+  $('#code-input').value = '';
   if (!code) return;
 
   try {
     const data = await api('/api/login', 'POST', { code });
     session = data;
-    
-    // Sauvegarde de la session pour le retour depuis la page Badge
     sessionStorage.setItem('utp_session_data', JSON.stringify(data));
-    
     afficherInterface();
   } catch (e) { 
     $('#login-error').textContent = e.message; 
   }
 }
 
-// --- AFFICHAGE DE L'INTERFACE ---
 async function afficherInterface() {
   $('#login-screen').classList.remove('active');
   $('#main-screen').classList.add('active');
@@ -61,23 +52,11 @@ async function afficherInterface() {
     $('#interface-admin-direction').style.display = 'none';
     $('#btn-admin').style.display = 'none';
     $('#btn-direction').style.display = 'none';
-    
-    // Charger les données si ce n'est pas déjà fait
-    if (centres.length === 0) {
-      await init(); 
-    }
-    
-    // Ouvrir le bon onglet (ex: ?tab=etudiants)
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('tab') === 'etudiants') {
-      showTab('etudiants');
-    } else {
-      showTab('etudiants');
-    }
+    if (centres.length === 0) await init(); 
+    showTab('etudiants');
   }
 }
 
-// --- RESTAURATION DE SESSION AU CHARGEMENT ---
 window.onload = async function() {
   const savedData = sessionStorage.getItem('utp_session_data');
   if (savedData) {
@@ -86,18 +65,14 @@ window.onload = async function() {
   }
 };
 
-// --- DÉCONNEXION SÉCURISÉE ---
 function logout() { 
   session = null; 
   sessionStorage.clear(); 
   localStorage.clear(); 
-  
   document.getElementById('main-screen').classList.remove('active');
   document.getElementById('login-screen').classList.add('active');
-  
   document.getElementById('code-input').value = '';
   document.getElementById('login-error').textContent = '';
-  
   document.getElementById('btn-admin').style.display = 'none';
   document.getElementById('btn-direction').style.display = 'none';
   document.getElementById('interface-responsable').style.display = 'none';
@@ -110,30 +85,24 @@ function showTab(name) {
   if (target) target.classList.add('active');
 }
 
-// --- INITIALISATION DES DONNÉES ---
 async function init() {
-  try {
-    centres = await api('/api/centres');
-    matieres = await api('/api/matieres');
+  centres = await api('/api/centres');
+  matieres = await api('/api/matieres');
 
-    const fillCentres = (id) => {
-      const sel = $(id);
-      if(!sel) return;
-      sel.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
-    };
-    fillCentres('#e-centre');
+  const fillCentres = (id) => {
+    const sel = $(id);
+    if(!sel) return;
+    sel.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+  };
+  fillCentres('#e-centre');
 
-    const matSel = $('#e-matiere');
-    if (matSel) {
-      matSel.innerHTML = Object.keys(matieres).map(m => `<option>${m}</option>`).join('');
-      matSel.onchange = () => majNiveaux();
-      majNiveaux();
-    }
-
-    await chargerEtudiants();
-  } catch (e) {
-    console.error("Erreur d'initialisation :", e);
+  const matSel = $('#e-matiere');
+  if (matSel) {
+    matSel.innerHTML = Object.keys(matieres).map(m => `<option>${m}</option>`).join('');
+    matSel.onchange = () => majNiveaux();
+    majNiveaux();
   }
+  await chargerEtudiants();
 }
 
 function majNiveaux() {
@@ -141,7 +110,6 @@ function majNiveaux() {
   $('#e-niveau').innerHTML = (matieres[mat] || []).map(n => `<option>${n}</option>`).join('');
 }
 
-// --- GESTION DES ÉTUDIANTS ---
 async function chargerEtudiants() {
   try {
     const rows = await api('/api/etudiants');
@@ -163,8 +131,6 @@ async function chargerEtudiants() {
 
     const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom} (${e.matiere} ${e.niveau})</option>`).join('');
     if ($('#p-etudiant')) $('#p-etudiant').innerHTML = opts;
-    if ($('#n-etudiant')) $('#n-etudiant').innerHTML = opts;
-    
   } catch (e) { console.error(e); }
 }
 
@@ -185,7 +151,6 @@ async function ajouterEtudiant() {
   } catch (e) { alert(e.message); }
 }
 
-// --- GESTION DES PAIEMENTS ---
 function toggleReference() {
   var mode = document.getElementById('p-mode').value;
   var refInput = document.getElementById('p-reference');
@@ -217,73 +182,62 @@ async function ajouterPaiement() {
 
     const r = await api('/api/paiements', 'POST', { etudiant_id, montant, tranche, mode_paiement, reference });
     
-    // GÉNÉRATION DU TICKET DE CAISSE
     const dateNow = new Date().toLocaleString('fr-FR');
     const ticketHTML = `
-      <html>
-      <head>
-        <title>Ticket de caisse - UTP</title>
-        <style>
-          @media print {
-            @page { size: 80mm auto; margin: 0; }
-            body { width: 80mm; margin: 0; padding: 10px; }
-            .no-print { display: none !important; }
-          }
-          body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; line-height: 1.4; width: 300px; margin: 0 auto; background: #fff; padding: 15px; }
-          .text-center { text-align: center; }
-          .logo { display: block; margin: 0 auto; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; }
-          .title { font-size: 16px; font-weight: bold; margin: 10px 0 2px 0; }
-          .subtitle { font-size: 10px; margin-bottom: 10px; }
-          .divider { border-top: 1px dashed #000; margin: 10px 0; }
-          .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-          .bold { font-weight: bold; }
-          .total { font-size: 14px; font-weight: bold; margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
-          .btn-print { display: block; width: 100%; padding: 12px; margin-top: 20px; background: #1A237E; color: white; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <img src="/logo.png" alt="Logo UTP" class="logo">
+      <html><head><style>
+        @media print { @page { size: 80mm auto; margin: 0; } body { width: 80mm; margin: 0; padding: 10px; } .no-print { display: none !important; } }
+        body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; line-height: 1.4; width: 300px; margin: 0 auto; background: #fff; padding: 15px; }
+        .text-center { text-align: center; } .logo { display: block; margin: 0 auto; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; }
+        .title { font-size: 16px; font-weight: bold; margin: 10px 0 2px 0; } .subtitle { font-size: 10px; margin-bottom: 10px; }
+        .divider { border-top: 1px dashed #000; margin: 10px 0; } .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .bold { font-weight: bold; } .total { font-size: 14px; font-weight: bold; margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
+        .btn-print { display: block; width: 100%; padding: 12px; margin-top: 20px; background: #1A237E; color: white; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
+      </style></head><body>
+        <img src="/logo.png" class="logo">
         <div class="text-center title">UTP MADAGASCAR</div>
         <div class="text-center subtitle">Centre : ${eleve.centre_nom || 'Non défini'}</div>
-        
         <div class="divider"></div>
-        
         <div class="row"><span>Date :</span> <span>${dateNow}</span></div>
         <div class="row"><span>Ticket N° :</span> <span>${r.ticket_ref}</span></div>
         <div class="row"><span>Mode :</span> <span>${mode_paiement}</span></div>
         ${reference ? `<div class="row"><span>Réf :</span> <span>${reference}</span></div>` : ''}
-        
         <div class="divider"></div>
-        
         <div class="row bold"><span>Élève :</span> <span>${eleve.nom} ${eleve.prenom}</span></div>
         <div class="row"><span>ID :</span> <span>${eleve.utp_id}</span></div>
         <div class="row"><span>Formation :</span> <span>${eleve.matiere} (${eleve.niveau})</span></div>
-        
         <div class="divider"></div>
-        
         <div class="row"><span>Montant versé :</span> <span>${r.montant.toLocaleString()} Ar</span></div>
         <div class="row"><span>Type :</span> <span>${tranche}</span></div>
         <div class="row bold"><span>Total payé à ce jour :</span> <span>${r.nouveauMontant.toLocaleString()} Ar</span></div>
-        
         <div class="total">MERCI DE VOTRE CONFIANCE</div>
         <div class="text-center" style="font-size: 9px; margin-top: 15px;">Ce ticket est généré automatiquement.</div>
-        
         <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
-      </body>
-      </html>
+      </body></html>
     `;
-
     const win = window.open('', '_blank');
     win.document.write(ticketHTML);
     win.document.close();
 
-    $('#ticket-result').innerHTML = `
-      <div class="card" style="background:#E8F5E9; border:1px solid #C8E6C9; color:#2E7D32;">
-        <h3>✅ Paiement enregistré avec succès !</h3>
-        <p>Le ticket a été ouvert dans un nouvel onglet pour impression.</p>
-      </div>`;
+    $('#ticket-result').innerHTML = `<div class="card" style="background:#E8F5E9; border:1px solid #C8E6C9; color:#2E7D32;"><h3>✅ Paiement enregistré avec succès !</h3><p>Le ticket a été ouvert dans un nouvel onglet pour impression.</p></div>`;
     
     await chargerEtudiants(); 
     $('#p-montant').value = ''; $('#p-reference').value = '';
   } catch (e) { alert(e.message); }
 }
+
+// --- COMMANDES DE LIVRES ---
+document.addEventListener('input', function(e) {
+  if (e.target.id === 'l-nombre') {
+    const total = e.target.value * 20000;
+    document.getElementById('l-total').value = total > 0 ? total.toLocaleString() + ' Ar' : '';
+  }
+});
+
+async function commanderLivres() {
+  const nombre = parseInt($('#l-nombre').value);
+  const centre_id = parseInt($('#e-centre').value);
+  if (!nombre || nombre <= 0) return alert('Veuillez saisir un nombre valide.');
+  
+  try {
+    const r = await api('/api/livres/commander', 'POST', { nombre_livres: nombre, centre_id });
+    alert(`✅ Commande envoyée à la Direction !\nMontant : ${r.montant_total.toLocaleString()} Ar\n\nCet argent a été dédu
