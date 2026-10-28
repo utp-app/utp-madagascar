@@ -1,14 +1,13 @@
 const db = require('./db');
 
-console.log("⏳ Début de l'importation des élèves depuis Google Sheet...");
+console.log("⏳ Début de l'importation des élèves...");
 
-// ⚠️ COLLEZ VOS VRAIES DONNÉES ICI (entre les crochets [ ])
-// Format : ['ID', 'NOM', 'PRENOM', ID_CENTRE, 'MATIERE', 'NIVEAU', MONTANT, 'DATE_ENTREE']
 const elevesAImporter = [
+  // ⚠️ COLLEZ VOS DONNÉES ICI (exemple avec les 3 premières lignes)
   ['UTP-3006', 'RAKOTOARIZAKA', 'SANDY HERINIAINA', 14, 'Anglais', 'L2', 80000, '2018-03-28'],
   ['UTP-3007', 'RAKOTONIRINA', 'SANTATRINIA JEAN CLAUDE', 14, 'Anglais', 'L2', 80000, '2018-03-28'],
   ['UTP-3008', 'RAHASINOMENTSY', 'SANTATRINIA ANTSA', 14, 'Anglais', 'L1', 60000, '2018-03-28'],
-  // Ajoutez les autres lignes ici...
+  // ... (ajoutez les autres lignes)
 ];
 
 try {
@@ -31,4 +30,5 @@ try {
   console.log(`✅ ${compteur} élèves importés avec succès !`);
 } catch (globalError) {
   console.error("❌ Erreur critique dans le script d'importation :", globalError.message);
+  // On ne fait pas 'process.exit(1)' pour que le serveur démarre quand même
 }
