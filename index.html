@@ -13,35 +13,28 @@
     <div id="user-info"></div>
   </header>
 
-  <!-- ÉCRAN DE CONNEXION -->
   <section id="login-screen" class="screen active">
     <div style="text-align:center; margin-bottom: 20px;">
       <img src="logo.png" alt="Logo UTP" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
     </div>
     <h2 style="text-align:center; margin-bottom: 20px;">Connexion</h2>
     <div style="display:flex; flex-direction:column; gap:10px; max-width:300px; margin:0 auto;">
-      <!-- CHAMP SÉCURISÉ : type="password" et autocomplete="new-password" -->
       <input type="password" id="code-input" autocomplete="new-password" placeholder="Entrez votre code d'accès" style="width:100%; padding:12px; border:2px solid #ccc; border-radius:8px; font-size:16px;" />
       <button onclick="login()" style="width:100%; padding:12px; font-size:16px; border-radius:8px; background:#1e3a5f; color:white; font-weight:bold; cursor:pointer;">Se connecter</button>
     </div>
     <p id="login-error" class="error" style="text-align:center; margin-top:10px; color:#e74c3c; font-weight:bold;"></p>
   </section>
 
-  <!-- ÉCRAN PRINCIPAL -->
   <section id="main-screen" class="screen">
-    
-    <!-- ==============================================
-         INTERFACE RÉSERVÉE AUX RESPONSABLES DE CENTRE 
-         ============================================== -->
     <div id="interface-responsable" style="display:none;">
       <nav>
         <button onclick="showTab('etudiants')">Étudiants</button>
         <button onclick="showTab('paiements')">Paiements</button>
+        <button onclick="showTab('livres')">📚 Livres</button> <!-- NOUVEAU BOUTON -->
         <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
         <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
       </nav>
 
-      <!-- Onglet Étudiants (Inscription) -->
       <div id="tab-etudiants" class="tab active">
         <h2>Inscrire un étudiant</h2>
         <div class="card" id="form-etudiant">
@@ -61,7 +54,6 @@
         </table>
       </div>
 
-      <!-- Onglet Paiements -->
       <div id="tab-paiements" class="tab">
         <h2>Enregistrer un paiement</h2>
         <div class="card">
@@ -82,16 +74,22 @@
           <button onclick="ajouterPaiement()">Enregistrer et générer le ticket</button>
         </div>
       </div>
+
+      <!-- NOUVEL ONGLET LIVRES -->
+      <div id="tab-livres" class="tab">
+        <h2>Commander des livres</h2>
+        <div class="card">
+          <p style="font-size:13px; color:#666; margin-bottom:15px;">Chaque livre coûte 20 000 Ar. Le montant sera automatiquement déduit de votre caisse et versé à la Direction.</p>
+          <input id="l-nombre" type="number" placeholder="Nombre de livres à commander" style="width:100%; margin-bottom:10px;" />
+          <input id="l-total" type="text" readonly placeholder="Montant total (Ar)" style="width:100%; margin-bottom:10px; background:#eee;" />
+          <button onclick="commanderLivres()">Envoyer la commande à la Direction</button>
+        </div>
+      </div>
     </div>
 
-    <!-- ==============================================
-         INTERFACE RÉSERVÉE À L'ADMIN ET LA DIRECTION 
-         ============================================== -->
     <div id="interface-admin-direction" style="display:none; text-align:center; margin-top: 50px;">
       <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; padding: 20px; font-size: 18px; background:#00897B; color:white; border-radius:10px; cursor:pointer; margin:10px;">⚙️ Paramétrage Admin</button>
-      
       <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; padding: 20px; font-size: 18px; background:#E65100; color:white; border-radius:10px; cursor:pointer; margin:10px;">⭐ Tableau de Bord Direction</button>
-      
       <br><br>
       <button onclick="logout()" style="padding: 10px 20px; background:#e74c3c; color:white; border-radius:5px; cursor:pointer;">Déconnexion</button>
     </div>
