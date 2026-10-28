@@ -4,16 +4,23 @@ let matieres = {};
 
 const $ = (sel) => document.querySelector(sel);
 
+// --- API FETCH ---
 async function api(path, method = 'GET', body = null) {
   const headers = { 'Content-Type': 'application/json' };
   if (session) headers['x-code-acces'] = session.utilisateur.code_acces;
+  
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
+  
   const r = await fetch(path, opts);
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erreur');
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Erreur inconnue' }));
+    throw new Error(err.error || 'Erreur');
+  }
   return r.json();
 }
 
+// --- AUTHENTIFICATION ---
 async function login() {
   const code = $('#code-input').value.trim();
   try {
@@ -25,39 +32,55 @@ async function login() {
     $('#main-screen').classList.add('active');
     $('#user-info').textContent = `${session.utilisateur.nom} (${session.utilisateur.role})`;
     
-    // AFFICHAGE SÉCURISÉ SELON LE RÔLE
+    // GESTION DES ACCÈS SELON LE RÔLE
     if (session.utilisateur.role === 'admin') {
       $('#btn-admin').style.display = 'inline-block';
+      $('#interface-responsable').style.display = 'none';
     } 
     else if (session.utilisateur.role === 'direction') {
       $('#btn-direction').style.display = 'inline-block';
+      $('#interface-responsable').style.display = 'none';
     } 
     else {
+      // Responsable : on affiche son interface de travail
       $('#interface-responsable').style.display = 'block';
-      await init(); // Chargement des données uniquement pour le responsable
+      $('#btn-admin').style.display = 'none';
+      $('#btn-direction').style.display = 'none';
+      await init(); 
     }
   } catch (e) { 
     $('#login-error').textContent = e.message; 
   }
 }
 
+// --- DÉCONNEXION SÉCURISÉE ---
 function logout() { 
+  // 1. Vider la session
   session = null; 
-  sessionStorage.removeItem('utp_code');
-  location.reload(); 
+  sessionStorage.clear(); 
+  localStorage.clear(); 
+  
+  // 2. Cacher l'écran principal et afficher la connexion
+  document.getElementById('main-screen').classList.remove('active');
+  document.getElementById('login-screen').classList.add('active');
+  
+  // 3. Vider les champs
+  document.getElementById('code-input').value = '';
+  document.getElementById('login-error').textContent = '';
+  
+  // 4. Réinitialiser les boutons
+  document.getElementById('btn-admin').style.display = 'none';
+  document.getElementById('btn-direction').style.display = 'none';
+  document.getElementById('interface-responsable').style.display = 'none';
 }
 
 function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  $('#tab-' + name).classList.add('active');
+  const target = document.getElementById('tab-' + name);
+  if (target) target.classList.add('active');
 }
 
-function toggleReference() {
-  var mode = document.getElementById('p-mode').value;
-  var refInput = document.getElementById('p-reference');
-  refInput.style.display = (mode === 'Mobile Money' || mode === 'Chèque') ? 'block' : 'none';
-}
-
+// --- INITIALISATION DES DONNÉES ---
 async function init() {
   centres = await api('/api/centres');
   matieres = await api('/api/matieres');
@@ -66,7 +89,6 @@ async function init() {
     const sel = $(id);
     if(!sel) return;
     sel.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
-    if (session.centre) sel.value = session.centre.id;
   };
   fillCentres('#e-centre');
 
@@ -78,6 +100,11 @@ async function init() {
   }
 
   await chargerEtudiants();
+  // Vérifier si on doit ouvrir un onglet spécifique (ex: retour depuis badge)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('tab') === 'etudiants') {
+    showTab('etudiants');
+  }
 }
 
 function majNiveaux() {
@@ -85,6 +112,7 @@ function majNiveaux() {
   $('#e-niveau').innerHTML = (matieres[mat] || []).map(n => `<option>${n}</option>`).join('');
 }
 
+// --- GESTION DES ÉTUDIANTS ---
 async function chargerEtudiants() {
   try {
     const rows = await api('/api/etudiants');
@@ -104,8 +132,10 @@ async function chargerEtudiants() {
       </tr>
     `).join('');
 
-    const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom}</option>`).join('');
+    const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom} (${e.matiere} ${e.niveau})</option>`).join('');
     if ($('#p-etudiant')) $('#p-etudiant').innerHTML = opts;
+    if ($('#n-etudiant')) $('#n-etudiant').innerHTML = opts;
+    
   } catch (e) { console.error(e); }
 }
 
@@ -121,8 +151,23 @@ async function ajouterEtudiant() {
       date_entree: $('#e-date').value
     });
     alert("✅ Étudiant ajouté !");
+    $('#e-nom').value = ''; $('#e-prenom').value = ''; $('#e-tel').value = '';
     await chargerEtudiants();
   } catch (e) { alert(e.message); }
+}
+
+// --- GESTION DES PAIEMENTS ---
+function toggleReference() {
+  var mode = document.getElementById('p-mode').value;
+  var refInput = document.getElementById('p-reference');
+  if (mode === 'Mobile Money' || mode === 'Chèque') {
+    refInput.style.display = 'block';
+    refInput.required = true;
+  } else {
+    refInput.style.display = 'none';
+    refInput.required = false;
+    refInput.value = '';
+  }
 }
 
 async function ajouterPaiement() {
@@ -133,38 +178,83 @@ async function ajouterPaiement() {
   const reference = $('#p-reference').value;
 
   if (!etudiant_id || !montant) return alert('Champs manquants');
-  
+  if ((mode_paiement === 'Mobile Money' || mode_paiement === 'Chèque') && !reference) {
+    return alert('⚠️ Veuillez saisir la référence (N° transaction).');
+  }
+
   try {
+    const rows = await api('/api/etudiants');
+    const eleve = rows.find(e => e.id === etudiant_id);
+
     const r = await api('/api/paiements', 'POST', { etudiant_id, montant, tranche, mode_paiement, reference });
     
-    // Génération du ticket
-    const eleve = await api('/api/etudiants').then(rows => rows.find(e => e.id === etudiant_id));
+    // GÉNÉRATION DU TICKET DE CAISSE
+    const dateNow = new Date().toLocaleString('fr-FR');
     const ticketHTML = `
-      <html><head><style>
-        @media print { @page { size: 80mm auto; margin: 0; } body { width: 80mm; margin: 0; padding: 10px; } }
-        body { font-family: monospace; font-size: 12px; width: 300px; margin: 0 auto; padding: 15px; }
-        .text-center { text-align: center; } .divider { border-top: 1px dashed #000; margin: 10px 0; }
-        .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .logo { display: block; margin: 0 auto; width: 70px; height: 70px; border-radius: 50%; }
-      </style></head><body>
-        <img src="/logo.png" class="logo">
-        <div class="text-center" style="font-size:16px; font-weight:bold;">UTP MADAGASCAR</div>
-        <div class="text-center" style="font-size:10px;">Centre : ${eleve.centre_nom}</div>
+      <html>
+      <head>
+        <title>Ticket de caisse - UTP</title>
+        <style>
+          @media print {
+            @page { size: 80mm auto; margin: 0; }
+            body { width: 80mm; margin: 0; padding: 10px; }
+            .no-print { display: none !important; }
+          }
+          body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; line-height: 1.4; width: 300px; margin: 0 auto; background: #fff; padding: 15px; }
+          .text-center { text-align: center; }
+          .logo { display: block; margin: 0 auto; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; }
+          .title { font-size: 16px; font-weight: bold; margin: 10px 0 2px 0; }
+          .subtitle { font-size: 10px; margin-bottom: 10px; }
+          .divider { border-top: 1px dashed #000; margin: 10px 0; }
+          .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+          .bold { font-weight: bold; }
+          .total { font-size: 14px; font-weight: bold; margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
+          .btn-print { display: block; width: 100%; padding: 12px; margin-top: 20px; background: #1A237E; color: white; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <img src="/logo.png" alt="Logo UTP" class="logo">
+        <div class="text-center title">UTP MADAGASCAR</div>
+        <div class="text-center subtitle">Centre : ${eleve.centre_nom || 'Non défini'}</div>
+        
         <div class="divider"></div>
-        <div class="row"><span>Ticket :</span> <span>${r.ticket_ref}</span></div>
-        <div class="row"><span>Élève :</span> <span>${eleve.nom} ${eleve.prenom}</span></div>
+        
+        <div class="row"><span>Date :</span> <span>${dateNow}</span></div>
+        <div class="row"><span>Ticket N° :</span> <span>${r.ticket_ref}</span></div>
         <div class="row"><span>Mode :</span> <span>${mode_paiement}</span></div>
+        ${reference ? `<div class="row"><span>Réf :</span> <span>${reference}</span></div>` : ''}
+        
         <div class="divider"></div>
-        <div class="row"><span>Versé :</span> <span>${r.montant.toLocaleString()} Ar</span></div>
-        <div class="row"><span>Total :</span> <span>${r.nouveauMontant.toLocaleString()} Ar</span></div>
-        <div class="text-center" style="margin-top:20px;">MERCI DE VOTRE CONFIANCE</div>
-        <button onclick="window.print()" style="width:100%; padding:10px; margin-top:20px;">🖨️ Imprimer</button>
-      </body></html>
+        
+        <div class="row bold"><span>Élève :</span> <span>${eleve.nom} ${eleve.prenom}</span></div>
+        <div class="row"><span>ID :</span> <span>${eleve.utp_id}</span></div>
+        <div class="row"><span>Formation :</span> <span>${eleve.matiere} (${eleve.niveau})</span></div>
+        
+        <div class="divider"></div>
+        
+        <div class="row"><span>Montant versé :</span> <span>${r.montant.toLocaleString()} Ar</span></div>
+        <div class="row"><span>Type :</span> <span>${tranche}</span></div>
+        <div class="row bold"><span>Total payé à ce jour :</span> <span>${r.nouveauMontant.toLocaleString()} Ar</span></div>
+        
+        <div class="total">MERCI DE VOTRE CONFIANCE</div>
+        <div class="text-center" style="font-size: 9px; margin-top: 15px;">Ce ticket est généré automatiquement.</div>
+        
+        <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+      </body>
+      </html>
     `;
+
     const win = window.open('', '_blank');
     win.document.write(ticketHTML);
     win.document.close();
 
-    await chargerEtudiants();
+    $('#ticket-result').innerHTML = `
+      <div class="card" style="background:#E8F5E9; border:1px solid #C8E6C9; color:#2E7D32;">
+        <h3>✅ Paiement enregistré avec succès !</h3>
+        <p>Le ticket a été ouvert dans un nouvel onglet pour impression.</p>
+      </div>`;
+    
+    await chargerEtudiants(); 
+    $('#p-montant').value = ''; $('#p-reference').value = '';
   } catch (e) { alert(e.message); }
 }
