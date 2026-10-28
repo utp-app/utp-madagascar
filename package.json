@@ -4,7 +4,7 @@
   "description": "Système de gestion UTP - Application complète",
   "main": "server.js",
   "scripts": {
-    "start": "start": "node importer.js && node server.js"
+    "start": "start": "node importer.js && node import_eleves.js && node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
