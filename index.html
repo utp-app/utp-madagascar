@@ -20,7 +20,8 @@
     </div>
     <h2 style="text-align:center; margin-bottom: 20px;">Connexion</h2>
     <div style="display:flex; flex-direction:column; gap:10px; max-width:300px; margin:0 auto;">
-      <input id="code-input" placeholder="Entrez votre code d'accès" style="width:100%; padding:12px; border:2px solid #ccc; border-radius:8px; font-size:16px;" />
+      <!-- CHAMP SÉCURISÉ : type="password" et autocomplete="new-password" -->
+      <input type="password" id="code-input" autocomplete="new-password" placeholder="Entrez votre code d'accès" style="width:100%; padding:12px; border:2px solid #ccc; border-radius:8px; font-size:16px;" />
       <button onclick="login()" style="width:100%; padding:12px; font-size:16px; border-radius:8px; background:#1e3a5f; color:white; font-weight:bold; cursor:pointer;">Se connecter</button>
     </div>
     <p id="login-error" class="error" style="text-align:center; margin-top:10px; color:#e74c3c; font-weight:bold;"></p>
@@ -37,7 +38,6 @@
         <button onclick="showTab('etudiants')">Étudiants</button>
         <button onclick="showTab('paiements')">Paiements</button>
         <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
-        <!-- SEUL BOUTON DÉCONNEXION POUR LE RESPONSABLE -->
         <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
       </nav>
 
@@ -86,7 +86,6 @@
 
     <!-- ==============================================
          INTERFACE RÉSERVÉE À L'ADMIN ET LA DIRECTION 
-         (Caché par défaut, affiché par le JS)
          ============================================== -->
     <div id="interface-admin-direction" style="display:none; text-align:center; margin-top: 50px;">
       <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; padding: 20px; font-size: 18px; background:#00897B; color:white; border-radius:10px; cursor:pointer; margin:10px;">⚙️ Paramétrage Admin</button>
