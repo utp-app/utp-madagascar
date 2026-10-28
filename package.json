@@ -1,17 +1,14 @@
 {
   "name": "utp-app",
   "version": "1.0.0",
-  "description": "Système de gestion UTP - centres de formation",
+  "description": "Application UTP",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "seed": "node seed.js"
+    "start": "node importer.js && node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
-    "express": "^4.19.2",
     "cors": "^2.8.5",
-    "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3"
+    "express": "^4.19.2"
   }
 }
