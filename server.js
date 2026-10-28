@@ -14,6 +14,7 @@ const MATIERES_NIVEAUX = {
   Chinois: ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4']
 };
 
+// Fonction de génération d'ID : regarde le plus grand numéro existant (même les archivés)
 function genUtpId() {
   const row = db.prepare(`SELECT MAX(CAST(SUBSTR(utp_id, 5) AS INTEGER)) AS m FROM etudiants WHERE utp_id LIKE 'UTP-%'`).get();
   const next = row && row.m ? row.m + 1 : 3000;
@@ -53,25 +54,42 @@ app.get('/api/centres', authRole, (req, res) => res.json(db.prepare('SELECT * FR
 app.get('/api/etudiants', authRole, (req, res) => {
   const u = req.utilisateur;
   let rows;
+  
+  // On ne sélectionne QUE les élèves qui ne sont pas archivés (statut différent de 'archive')
   if (u.role === 'admin' || u.role === 'direction') {
-    rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id`).all();
+    rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id WHERE e.statut != 'archive'`).all();
   } else {
-    rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id WHERE e.centre_id = ?`).all(u.centre_id);
+    rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id WHERE e.centre_id = ? AND e.statut != 'archive'`).all(u.centre_id);
   }
   res.json(rows);
 });
 
-// ---- SÉCURITÉ : SEUL LE RESPONSABLE PEUT INSCRIRE ----
+// ---- INSCRIPTION (réservée au responsable) ----
 app.post('/api/etudiants', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') {
     return res.status(403).json({ error: 'Seul un responsable de centre peut inscrire un élève.' });
   }
 
   const { nom, prenom, telephone, matiere, niveau, centre_id, date_entree } = req.body;
-  const utp_id = genUtpId();
-  const info = db.prepare(`INSERT INTO etudiants (utp_id, nom, prenom, telephone, matiere, niveau, centre_id, date_entree) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(utp_id, nom, prenom || '', telephone || '', matiere, niveau, centre_id, date_entree || new Date().toISOString().slice(0,10));
-  res.json({ id: info.lastInsertRowid, utp_id });
+  
+  // 1. VÉRIFICATION : Est-ce que cet élève existe déjà (même archivé) ?
+  const existant = db.prepare(`SELECT utp_id FROM etudiants WHERE nom = ? AND prenom = ?`).get(nom, prenom);
+
+  let utp_id;
+  if (existant) {
+    // S'il existe déjà, il garde son ancien ID
+    utp_id = existant.utp_id;
+    // On le réactive
+    db.prepare(`UPDATE etudiants SET statut = 'actif', centre_id = ?, date_entree = ? WHERE utp_id = ?`)
+      .run(centre_id, date_entree || new Date().toISOString().slice(0,10), utp_id);
+  } else {
+    // Sinon, on lui crée un nouvel ID
+    utp_id = genUtpId();
+    db.prepare(`INSERT INTO etudiants (utp_id, nom, prenom, telephone, matiere, niveau, centre_id, date_entree, statut) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'actif')`)
+      .run(utp_id, nom, prenom || '', telephone || '', matiere, niveau, centre_id, date_entree || new Date().toISOString().slice(0,10));
+  }
+
+  res.json({ utp_id, message: existant ? 'Élève réinscrit (ID conservé)' : 'Nouvel élève inscrit' });
 });
 
 app.post('/api/paiements', authRole, (req, res) => {
@@ -88,6 +106,18 @@ app.post('/api/paiements', authRole, (req, res) => {
 
   db.prepare('UPDATE etudiants SET montant_paye = ?, badge_genere = ? WHERE id = ?').run(nouveauMontant, badge, etudiant_id);
   res.json({ ticket_ref, montant, nouveauMontant, badge_genere: badge });
+});
+
+/* ============================================================
+   RÉINITIALISATION AUTOMATIQUE (Archivage)
+   ============================================================ */
+app.post('/api/reinitialiser', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  
+  // On archive tous les élèves (on ne les efface pas !)
+  db.prepare("UPDATE etudiants SET statut = 'archive'").run();
+  
+  res.json({ ok: true, message: 'Tous les élèves ont été archivés. Les ID sont conservés.' });
 });
 
 app.listen(process.env.PORT || 3000, '0.0.0.0', () => {
