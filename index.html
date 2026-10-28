@@ -3,63 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UTP – Gestion des centres</title>
+  <title>UTP – Gestion</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <img src="logo.png" alt="Logo UTP" style="height: 40px; width: 40px; border-radius: 50%; object-fit: cover; margin-right: 15px; border: 1px solid #ccc;">
+    <img src="logo.png" style="height: 40px; border-radius: 50%; margin-right: 10px;">
     <h1>UTP – Système de gestion</h1>
     <div id="user-info"></div>
   </header>
 
-  <section id="login-screen" class="screen active">
-    <div style="text-align:center; margin-bottom: 20px;">
-      <img src="logo.png" alt="Logo UTP" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-    </div>
-    <h2 style="text-align:center; margin-bottom: 20px;">Connexion</h2>
-    <div style="display:flex; flex-direction:column; gap:10px; max-width:300px; margin:0 auto;">
-      <input id="code-input" placeholder="Entrez votre code d'accès" style="width:100%; padding:12px; border:2px solid #ccc; border-radius:8px; font-size:16px;" />
-      <button onclick="login()" style="width:100%; padding:12px; font-size:16px; border-radius:8px; background:#1e3a5f; color:white; font-weight:bold; cursor:pointer;">Se connecter</button>
-    </div>
-    <p id="login-error" class="error" style="text-align:center; margin-top:10px; color:#e74c3c; font-weight:bold;"></p>
+  <section id="login-screen" class="screen active" style="text-align:center; margin-top:50px;">
+    <img src="logo.png" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom:20px;">
+    <h2>Connexion</h2>
+    <input id="code-input" placeholder="Code d'accès" style="padding:10px; margin:10px; width:200px;" />
+    <button onclick="login()" style="padding:10px 20px; background:#1A237E; color:white; border:none; border-radius:5px;">Se connecter</button>
+    <p id="login-error" style="color:red; margin-top:10px;"></p>
   </section>
 
   <section id="main-screen" class="screen">
     <nav>
       <button onclick="showTab('etudiants')">Étudiants</button>
       <button onclick="showTab('paiements')">Paiements</button>
-      <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
-      <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; background:#00897B; color:white;">⚙️ Admin</button>
-      <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; background:#E65100; color:white;">⭐ Direction</button>
-      <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
+      <button onclick="window.location.href='/badge.html'">Badges</button>
+      <button onclick="logout()" style="margin-left:auto; background:red; color:white;">Déconnexion</button>
     </nav>
 
+    <!-- Inscription -->
     <div id="tab-etudiants" class="tab active">
       <h2>Inscrire un étudiant</h2>
-      <div class="card" id="form-etudiant">
-        <input id="e-nom" placeholder="Nom" />
-        <input id="e-prenom" placeholder="Prénom" />
-        <input id="e-tel" placeholder="Contact (Téléphone)" />
-        
-        <select id="e-matiere"></select>
-        <select id="e-niveau"></select>
-        <select id="e-centre"></select>
-        <input id="e-date" type="date" />
-        <button onclick="ajouterEtudiant()">Ajouter l'élève</button>
+      <div class="card">
+        <input id="e-nom" placeholder="Nom" style="width:100%; margin-bottom:10px;" />
+        <input id="e-prenom" placeholder="Prénom" style="width:100%; margin-bottom:10px;" />
+        <input id="e-tel" placeholder="Contact" style="width:100%; margin-bottom:10px;" />
+        <select id="e-matiere" style="width:100%; margin-bottom:10px;"></select>
+        <select id="e-niveau" style="width:100%; margin-bottom:10px;"></select>
+        <select id="e-centre" style="width:100%; margin-bottom:10px;"></select>
+        <input id="e-date" type="date" style="width:100%; margin-bottom:10px;" />
+        <button onclick="ajouterEtudiant()" style="width:100%; padding:10px; background:green; color:white;">Ajouter</button>
       </div>
-      <h3>Liste des élèves</h3>
-      <table id="table-etudiants">
-        <thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Centre</th><th>Payé</th><th>Badge</th><th>Date</th><th>Actions</th></tr></thead>
+      
+      <h3>Liste</h3>
+      <table id="table-etudiants" style="width:100%; text-align:left;">
+        <thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Centre</th><th>Payé</th><th>Badge</th><th>Examen</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
 
+    <!-- Paiement -->
     <div id="tab-paiements" class="tab">
-      <h2>Paiements / Tickets</h2>
+      <h2>Paiements</h2>
       <div class="card">
         <select id="p-etudiant" style="width:100%; margin-bottom:10px;"></select>
-        <input id="p-montant" type="number" placeholder="Montant (Ar)" style="width:100%; margin-bottom:10px;" />
+        <input id="p-montant" type="number" placeholder="Montant" style="width:100%; margin-bottom:10px;" />
         <select id="p-tranche" style="width:100%; margin-bottom:10px;">
           <option value="total">Total</option>
           <option value="tranche1">Tranche 1</option>
@@ -67,16 +63,16 @@
         </select>
         <select id="p-mode" style="width:100%; margin-bottom:10px;" onchange="toggleReference()">
           <option value="Espèce">Espèce</option>
-          <option value="Mobile Money">Mobile Money (Mvola, Airtel, Orange)</option>
-          <option value="Virement">Versement bancaire</option>
+          <option value="Mobile Money">Mobile Money</option>
+          <option value="Virement">Virement</option>
           <option value="Chèque">Chèque</option>
         </select>
-        <input id="p-reference" type="text" placeholder="Référence (N° transaction)" style="width:100%; margin-bottom:10px; display:none;" />
-        <button onclick="ajouterPaiement()">Enregistrer</button>
+        <input id="p-reference" type="text" placeholder="Référence" style="width:100%; margin-bottom:10px; display:none;" />
+        <button onclick="ajouterPaiement()" style="width:100%; padding:10px; background:blue; color:white;">Enregistrer</button>
       </div>
-      <div id="ticket-result"></div>
     </div>
   </section>
+
   <script src="app.js"></script>
 </body>
 </html>
