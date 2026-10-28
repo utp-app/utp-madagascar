@@ -125,6 +125,22 @@ app.get('/api/centres', authRole, (req, res) => {
   }
 });
 
+// Liste des responsables (pour l'Admin)
+app.get('/api/responsables', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  
+  const rows = db.prepare(`
+    SELECT r.id, r.nom, r.code_acces, 
+           GROUP_CONCAT(c.nom, ', ') as centres_noms
+    FROM responsables r
+    LEFT JOIN responsable_centres rc ON rc.responsable_id = r.id
+    LEFT JOIN centres c ON c.id = rc.centre_id
+    WHERE r.code_acces NOT IN ('ADMIN2030', 'COORDO0009')
+    GROUP BY r.id
+  `).all();
+  res.json(rows);
+});
+
 /* ============================================================
    GESTION DES ÉTUDIANTS
    ============================================================ */
