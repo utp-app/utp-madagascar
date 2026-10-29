@@ -214,6 +214,28 @@ app.post('/api/admin/utilisateurs', authRole, (req, res) => {
   } catch (e) { res.status(400).json({ error: 'Code déjà existant' }); }
 });
 
+// MODIFICATION D'UN ÉLÈVE
+app.put('/api/admin/etudiants/:id', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  const { nom, prenom, telephone, matiere, niveau, centre_id, montant_paye, date_entree } = req.body;
+  const id = req.params.id;
+  try {
+    db.prepare(`
+      UPDATE etudiants 
+      SET nom = ?, prenom = ?, telephone = ?, matiere = ?, niveau = ?, centre_id = ?, montant_paye = ?, date_entree = ?
+      WHERE id = ?
+    `).run(nom, prenom, telephone, matiere, niveau, centre_id, montant_paye, date_entree, id);
+    
+    const etudiant = db.prepare('SELECT montant_paye FROM etudiants WHERE id = ?').get(id);
+    const badge = etudiant.montant_paye >= 20000 ? 1 : 0;
+    db.prepare('UPDATE etudiants SET badge_genere = ? WHERE id = ?').run(badge, id);
+    
+    res.json({ ok: true, message: 'Élève modifié avec succès' });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 app.get('/api/admin/transactions', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   res.json(db.prepare(`SELECT p.*, e.nom, e.prenom, e.utp_id, c.nom AS centre_nom FROM paiements p JOIN etudiants e ON e.id = p.etudiant_id JOIN centres c ON c.id = e.centre_id ORDER BY p.id DESC`).all());
@@ -249,7 +271,6 @@ app.post('/api/archiver-expires', authRole, (req, res) => {
   res.json({ archives, message: `${archives} élèves archivés avec succès.` });
 });
 
-// NOUVELLE ROUTE : Nettoyage des archives
 app.post('/api/admin/nettoyer-archives', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   const count = db.prepare("SELECT COUNT(*) as c FROM etudiants WHERE statut = 'archive'").get().c;
@@ -287,24 +308,9 @@ setInterval(() => {
     }
   }
   if (count > 0) console.log(`✅ ${count} élève(s) archivé(s) automatiquement.`);
-  else console.log("✅ Aucun élève à archiver aujourd'hui.");
 }, 24 * 60 * 60 * 1000);
-
-/* ============================================================
-   DÉMARRAGE DU SERVEUR
-   ============================================================ */
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`UTP App démarrée sur le port ${PORT}`);
-  console.log("Vérification initiale des expirations...");
-  const eleves = db.prepare("SELECT id, matiere, date_entree FROM etudiants WHERE statut = 'actif'").all();
-  let count = 0;
-  for (let e of eleves) {
-    if (estExpire(e.date_entree, e.matiere)) {
-      db.prepare("UPDATE etudiants SET statut = 'archive' WHERE id = ?").run(e.id);
-      count++;
-    }
-  }
-  if (count > 0) console.log(`✅ ${count} élève(s) archivé(s) au démarrage.`);
 });
