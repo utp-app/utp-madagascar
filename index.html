@@ -33,14 +33,15 @@
          INTERFACE RÉSERVÉE AUX RESPONSABLES DE CENTRE 
          ============================================== -->
     <div id="interface-responsable" style="display:none;">
-      <!-- MENU AVEC BOUTON DECONNEXION A DROITE -->
+      
+      <!-- LE MENU EST BIEN ICI (EN HAUT) -->
       <nav>
         <button onclick="showTab('etudiants')">Étudiants</button>
         <button onclick="showTab('paiements')">Paiements</button>
         <button onclick="showTab('notes')">Notes</button>
         <button onclick="showTab('livres')">📚 Livres</button>
         <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
-        <button id="btn-deconnexion" onclick="logout()">Déconnexion</button>
+        <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
       </nav>
 
       <!-- Onglet Étudiants (Inscription) -->
