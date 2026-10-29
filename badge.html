@@ -29,6 +29,9 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
 .alerte-ok { background:#E8F5E9; color:#2E7D32; border:1px solid #A5D6A7; }
 .alerte-ko { background:#FFEBEE; color:#C62828; border:1px solid #EF9A9A; }
 
+/* =========================================
+   BADGE CLASSIQUE (Format Portrait)
+   ========================================= */
 #badgeClassique { 
   width: 300px; height: 420px; 
   background-image: url('fond_badge_classique.jpg');
@@ -54,6 +57,9 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
 
 .bc-id-box { position:absolute; top: 89%; left: 50%; transform:translateX(-50%); background: #fff; color: #1A237E; padding: 4px 15px; border-radius: 20px; font-size:12px; font-weight:900; font-family:monospace; border: 2px solid #C62828; }
 
+/* =========================================
+   BADGE INTELLO (Format Paysage)
+   ========================================= */
 #badgeIntello { 
   width: 420px; height: 300px; 
   background-image: url('fond_badge_intello.jpg');
@@ -130,6 +136,12 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
     </div>
   </div>
 
+  <!-- NOUVEAU CHAMP CONTACT RESPONSABLE -->
+  <div class="form-group">
+    <label>Contact Responsable</label>
+    <input type="text" id="contactBadge" readonly>
+  </div>
+
   <h3 style="font-size:14px; color:#1A237E; margin-bottom:10px; margin-top:20px; border-bottom:1px solid #eee; padding-bottom:5px;">📸 Photo de l'élève (Optionnel)</h3>
   
   <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileUpload(event)">
@@ -143,6 +155,7 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
   <div id="previewContainer" class="preview-container">
     <h3 style="color:#1A237E; margin-bottom:15px;">Aperçu du Badge</h3>
     
+    <!-- BADGE CLASSIQUE -->
     <div id="badgeClassique" class="hidden">
       <div class="bc-centre-name" id="previewCentreC">CENTRE UTP</div>
       <div class="bc-photo-box">
@@ -156,6 +169,7 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
       <div class="bc-id-box">ID <span id="previewIdC">—</span></div>
     </div>
 
+    <!-- BADGE INTELLO -->
     <div id="badgeIntello" class="hidden">
       <div class="bi-photo-box">
         <img id="previewPhotoI" src="">
@@ -229,7 +243,7 @@ async function chercherEleve() {
     document.getElementById('niveauBadge').value = found.niveau;
     document.getElementById('idBadge').value = found.utp_id;
     
-    // CONTACT DU RESPONSABLE
+    // REMPLISSAGE AUTOMATIQUE DU CONTACT DU RESPONSABLE
     document.getElementById('contactBadge').value = found.responsable_tel || '034 60 761 00';
 
     document.getElementById('dateExpiration').value = calculerDateExpiration(found.date_entree, found.matiere);
