@@ -99,7 +99,6 @@ app.get('/api/responsables', authRole, (req, res) => {
   res.json(db.prepare(`SELECT r.id, r.nom, r.code_acces, GROUP_CONCAT(c.nom, ', ') as centres_noms FROM responsables r LEFT JOIN responsable_centres rc ON rc.responsable_id = r.id LEFT JOIN centres c ON c.id = rc.centre_id WHERE r.code_acces NOT IN ('ADMIN2030', 'COORDO0009') GROUP BY r.id`).all());
 });
 
-// ROUTE MODIFIÉE POUR INCLURE LE TÉLÉPHONE DU RESPONSABLE
 app.get('/api/etudiants', authRole, (req, res) => {
   const u = req.utilisateur;
   let rows;
@@ -158,7 +157,6 @@ app.post('/api/paiements', authRole, (req, res) => {
   res.json({ ticket_ref, montant, nouveauMontant, badge_genere: badge });
 });
 
-// --- COMMANDE DE LIVRES DÉTAILLÉE ---
 app.post('/api/livres/commander', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
   const { detail_livres, centre_id } = req.body; 
@@ -180,7 +178,6 @@ app.get('/api/direction/livres-details', authRole, (req, res) => {
   res.json(rows.map(r => ({ ...r, details: JSON.parse(r.details || '[]') })));
 });
 
-// --- DÉPENSES (Responsable) ---
 app.post('/api/depenses', authRole, (req, res) => {
   const u = req.utilisateur;
   if (u.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
@@ -190,7 +187,6 @@ app.post('/api/depenses', authRole, (req, res) => {
   res.json({ id: info.lastInsertRowid });
 });
 
-// --- STATISTIQUES POUR LE RESPONSABLE ---
 app.get('/api/responsable/stats', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
   const u = req.utilisateur;
@@ -208,7 +204,6 @@ app.get('/api/responsable/stats', authRole, (req, res) => {
   res.json({ totalRecettes, totalDepenses, solde: totalRecettes - totalDepenses, detailCentres });
 });
 
-// --- RAPPORT COMPTABLE (JOURNAL DES MOUVEMENTS) ---
 app.get('/api/responsable/rapport-comptable', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
   const u = req.utilisateur;
@@ -236,10 +231,6 @@ app.post('/api/notes', authRole, (req, res) => {
   res.json({ total, appreciation, passe_niveau: passe });
 });
 
-/* ============================================================
-   PLANNING EXAMENS
-   ============================================================ */
-
 app.post('/api/direction/examens/:id/approuver', authRole, (req, res) => {
   if (req.utilisateur.role !== 'direction') return res.status(403).json({ error: 'Direction requise' });
   const etudiant = db.prepare('SELECT * FROM etudiants WHERE id = ?').get(req.params.id);
@@ -254,10 +245,6 @@ app.post('/api/direction/examens/:id/modifier', authRole, (req, res) => {
   db.prepare("UPDATE etudiants SET statut_examen = 'modifie', date_examen_validee = ? WHERE id = ?").run(nouvelle_date, req.params.id);
   res.json({ ok: true, date: nouvelle_date });
 });
-
-/* ============================================================
-   ADMINISTRATION
-   ============================================================ */
 
 app.post('/api/admin/centres', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
