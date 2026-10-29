@@ -96,7 +96,7 @@ app.get('/api/centres', authRole, (req, res) => {
 
 app.get('/api/responsables', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
-  res.json(db.prepare(`SELECT r.id, r.nom, r.code_acces, GROUP_CONCAT(c.nom, ', ') as centres_noms FROM responsables r LEFT JOIN responsable_centres rc ON rc.responsable_id = r.id LEFT JOIN centres c ON c.id = rc.centre_id WHERE r.code_acces NOT IN ('ADMIN2030', 'COORDO0009') GROUP BY r.id`).all());
+  res.json(db.prepare(`SELECT r.id, r.nom, r.code_acces, r.telephone, GROUP_CONCAT(c.nom, ', ') as centres_noms FROM responsables r LEFT JOIN responsable_centres rc ON rc.responsable_id = r.id LEFT JOIN centres c ON c.id = rc.centre_id WHERE r.code_acces NOT IN ('ADMIN2030', 'COORDO0009') GROUP BY r.id`).all());
 });
 
 app.get('/api/etudiants', authRole, (req, res) => {
@@ -254,9 +254,9 @@ app.post('/api/admin/centres', authRole, (req, res) => {
 
 app.post('/api/admin/utilisateurs', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
-  const { nom, code_acces, centres_ids } = req.body;
+  const { nom, code_acces, telephone, centres_ids } = req.body;
   try {
-    const info = db.prepare('INSERT INTO responsables (nom, code_acces) VALUES (?, ?)').run(nom, code_acces);
+    const info = db.prepare('INSERT INTO responsables (nom, code_acces, telephone) VALUES (?, ?, ?)').run(nom, code_acces, telephone || '');
     if (centres_ids && centres_ids.length > 0) {
       const insertLiaison = db.prepare('INSERT INTO responsable_centres (responsable_id, centre_id) VALUES (?, ?)');
       centres_ids.forEach(cId => insertLiaison.run(info.lastInsertRowid, cId));
