@@ -65,6 +65,7 @@
       <div class="form-row">
         <div class="form-group"><label>Nom</label><input type="text" id="newUserName"></div>
         <div class="form-group"><label>Code d'accès</label><input type="text" id="newUserCode"></div>
+        <div class="form-group"><label>Téléphone</label><input type="text" id="newUserTel"></div>
       </div>
       <div class="form-group" style="margin-bottom:12px;">
         <label>Centres gérés (Maintenez Ctrl pour en sélectionner plusieurs)</label>
@@ -74,7 +75,7 @@
     </div>
     <div class="card">
       <h3>📋 Liste des responsables</h3>
-      <table><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Centres gérés</th></tr></thead><tbody id="tbodyUsers"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Téléphone</th><th>Centres gérés</th></tr></thead><tbody id="tbodyUsers"></tbody></table>
     </div>
   </div>
 
@@ -201,20 +202,22 @@ async function creerCentre() {
 async function chargerUtilisateurs() {
   const users = await apiFetch('/api/responsables');
   const tbody = document.getElementById('tbodyUsers');
-  if (!users || users.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Aucun responsable trouvé.</td></tr>'; return; }
-  tbody.innerHTML = users.map(u => `<tr><td>${u.id}</td><td>${u.nom}</td><td>${u.code_acces}</td><td>${u.centres_noms || '-'}</td></tr>`).join('');
+  if (!users || users.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Aucun responsable trouvé.</td></tr>'; return; }
+  tbody.innerHTML = users.map(u => `<tr><td>${u.id}</td><td>${u.nom}</td><td>${u.code_acces}</td><td>${u.telephone || '-'}</td><td>${u.centres_noms || '-'}</td></tr>`).join('');
 }
 async function creerUtilisateur() {
   const nom = document.getElementById('newUserName').value;
   const code = document.getElementById('newUserCode').value;
+  const tel = document.getElementById('newUserTel').value;
   const select = document.getElementById('newUserCentres');
   const centres_ids = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
   if (!nom || !code) return alert('Nom et Code requis');
   try {
-    await apiFetch('/api/admin/utilisateurs', 'POST', { nom, code_acces: code, centres_ids });
+    await apiFetch('/api/admin/utilisateurs', 'POST', { nom, code_acces: code, telephone: tel, centres_ids });
     alert('✅ Responsable créé !');
     document.getElementById('newUserName').value = '';
     document.getElementById('newUserCode').value = '';
+    document.getElementById('newUserTel').value = '';
     await chargerUtilisateurs();
   } catch(e) { alert(e.message); }
 }
