@@ -33,7 +33,6 @@
     overflow: hidden;
   }
 
-  /* Coordonnées calées sur l'image */
   .cert-saved { position:absolute; top: 8%; left: 5%; font-size: 14px; color:#000; font-family: Arial; font-weight:bold; }
   .cert-nom { position:absolute; top: 51.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:32px; font-weight:bold; color:#000; font-family: Arial; white-space:nowrap; }
   
@@ -54,7 +53,6 @@
 <div class="container">
   <div class="header">
     <h1>🎓 Générateur de Certificat (Anglais L2)</h1>
-    <!-- BOUTON RETOUR VERS LA DIRECTION -->
     <button class="btn-back" onclick="window.location.href='/direction.html'">⬅️ Retour au tableau de bord</button>
   </div>
 
@@ -67,12 +65,12 @@
       </div>
     </div>
     <div>
-      <label>Date de début (Inscription)</label>
-      <input type="date" id="dateDebut">
+      <label>Date d'entrée (Calculée)</label>
+      <input type="date" id="dateDebut" onchange="recalculerDateFin()">
     </div>
     <div>
-      <label>Date de fin (Examen +2 mois)</label>
-      <input type="date" id="dateFin">
+      <label>Date de fin (Modifiable)</label>
+      <input type="date" id="dateFin" onchange="recalculerDateDebut()">
     </div>
   </div>
   <p id="statusEleve" style="font-size:13px; font-weight:bold; color:#666; margin-bottom:20px;"></p>
@@ -117,7 +115,6 @@ async function chercherEleve() {
   try {
     const eleves = await apiFetch('/api/etudiants');
     
-    // On cherche un élève en Anglais L2
     const found = eleves.find(e => 
       (e.utp_id.toLowerCase() === query || (e.nom + ' ' + e.prenom).toLowerCase().includes(query))
       && e.matiere === 'Anglais' && e.niveau === 'L2'
@@ -135,18 +132,53 @@ async function chercherEleve() {
     status.textContent = "✅ Élève éligible : " + found.nom + " " + found.prenom + " (Anglais L2)";
     status.style.color = "#2E7D32";
 
-    var dateDebut = new Date(found.date_entree);
-    var dateFin = new Date(dateDebut);
+    // --- CALCUL INITIAL ---
+    // Par défaut, la date de fin est aujourd'hui (ou la date réelle de fin)
+    var dateFin = new Date(found.date_entree);
+    // On estime que l'examen a eu lieu 4 mois après (théorique)
     dateFin.setMonth(dateFin.getMonth() + 4);
     
-    document.getElementById('dateDebut').valueAsDate = dateDebut;
+    // On recule de 2 semaines pour la pause de repêchage
+    // (Ici on ne recule pas la date de fin, on la garde comme référence)
+    
     document.getElementById('dateFin').valueAsDate = dateFin;
+    // On calcule la date d'entrée en reculant de 4 mois + 2 semaines
+    var dateEntreeCalculee = new Date(dateFin);
+    dateEntreeCalculee.setMonth(dateEntreeCalculee.getMonth() - 4);
+    dateEntreeCalculee.setDate(dateEntreeCalculee.getDate() - 14);
+    document.getElementById('dateDebut').valueAsDate = dateEntreeCalculee;
 
     await genererApercu(found);
   } catch (err) {
     status.textContent = "❌ Erreur : " + err.message;
     status.style.color = "#C62828";
   }
+}
+
+// Quand on change la date de fin, on recalcule la date d'entrée (fin - 4 mois - 14 jours)
+function recalculerDateDebut() {
+  var dateFin = document.getElementById('dateFin').value;
+  if (!dateFin) return;
+  
+  var d = new Date(dateFin);
+  d.setMonth(d.getMonth() - 4);
+  d.setDate(d.getDate() - 14);
+  
+  document.getElementById('dateDebut').valueAsDate = d;
+  updateDates();
+}
+
+// Quand on change la date d'entrée, on recalcule la date de fin (entrée + 4 mois + 14 jours)
+function recalculerDateFin() {
+  var dateDebut = document.getElementById('dateDebut').value;
+  if (!dateDebut) return;
+  
+  var d = new Date(dateDebut);
+  d.setMonth(d.getMonth() + 4);
+  d.setDate(d.getDate() + 14);
+  
+  document.getElementById('dateFin').valueAsDate = d;
+  updateDates();
 }
 
 function formatEnglishDate(dateStr) {
@@ -188,8 +220,6 @@ async function genererApercu(eleve) {
   document.getElementById('certificat-preview').style.display = 'block';
   document.getElementById('btnImprimer').style.display = 'inline-block';
   
-  document.getElementById('dateDebut').onchange = updateDates;
-  document.getElementById('dateFin').onchange = updateDates;
   updateDates();
 }
 
