@@ -50,16 +50,28 @@
   </div>
 
   <div class="nav-tabs">
-    <button class="nav-tab active" id="navAppro" onclick="changerOnglet('appro')">✅ Validation des Livres</button>
+    <button class="nav-tab active" id="navExamens" onclick="changerOnglet('examens')">📅 Planning Examens</button>
+    <button class="nav-tab" id="navAppro" onclick="changerOnglet('appro')">✅ Validation des Livres</button>
     <button class="nav-tab" id="navCompta" onclick="changerOnglet('compta')">💰 Comptabilité</button>
     <button class="nav-tab" id="navEleves" onclick="changerOnglet('eleves')">👨‍🎓 Élèves & PDF</button>
     <button class="nav-tab" id="navLivres" onclick="changerOnglet('livres')">📚 Commandes Livres</button>
   </div>
 
-  <div id="ongletAppro">
+  <!-- ONGLET PLANNING EXAMENS -->
+  <div id="ongletExamens">
+    <div class="card">
+      <h3>📅 Validation des dates d'examen</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Vérifiez les dates calculées automatiquement et validez-les, ou proposez une nouvelle date.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Élève</th><th>Matière</th><th>Date auto</th><th>Statut</th><th>Actions</th></tr></thead>
+        <tbody id="tbodyExamens"><tr><td colspan="6" class="loading">Chargement...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="ongletAppro" class="hidden">
     <div class="card">
       <h3>✅ Élèves en attente d'approbation pour le livre</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">Ces élèves ont payé les 20 000 Ar. Approuvez-les pour les passer en "Actif".</p>
       <table>
         <thead><tr><th>ID</th><th>Nom complet</th><th>Centre</th><th>Montant payé</th><th>Action</th></tr></thead>
         <tbody id="tbodyAppro"><tr><td colspan="5" class="loading">Chargement...</td></tr></tbody>
@@ -81,7 +93,6 @@
   <div id="ongletLivres" class="hidden">
     <div class="card">
       <h3>📚 Commandes de livres reçues</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">Les responsables ont versé ces montants dans la caisse de la Direction.</p>
       <table>
         <thead><tr><th>Date</th><th>Centre</th><th>Nombre de livres</th><th>Montant (Ar)</th><th>Statut</th></tr></thead>
         <tbody id="tbodyLivres"><tr><td colspan="5" class="loading">Chargement...</td></tr></tbody>
@@ -105,19 +116,75 @@ async function apiFetch(path, method = 'GET', body = null) {
   return r.json();
 }
 window.onload = async function() {
+  await chargerExamens();
   await chargerApprobations();
   await chargerCompta();
   await chargerElevesParCentre();
   await chargerLivres();
 };
 function changerOnglet(onglet) {
-  ['appro','compta','eleves','livres'].forEach(o => {
+  ['examens', 'appro','compta','eleves','livres'].forEach(o => {
     document.getElementById('nav' + o.charAt(0).toUpperCase() + o.slice(1)).classList.remove('active');
     document.getElementById('onglet' + o.charAt(0).toUpperCase() + o.slice(1)).classList.add('hidden');
   });
   document.getElementById('nav' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.add('active');
   document.getElementById('onglet' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.remove('hidden');
 }
+
+// --- PLANNING EXAMENS ---
+async function chargerExamens() {
+  try {
+    const eleves = await apiFetch('/api/etudiants');
+    const tbody = document.getElementById('tbodyExamens');
+    if (eleves.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun élève inscrit.</td></tr>'; return; }
+    
+    tbody.innerHTML = eleves.map(e => {
+      let statutBadge = '';
+      if (e.statut_examen === 'approuve') statutBadge = '<span style="color:#2E7D32; font-weight:bold;">✅ Approuvé</span>';
+      else if (e.statut_examen === 'modifie') statutBadge = '<span style="color:#E65100; font-weight:bold;">⚠️ Date Modifiée</span>';
+      else statutBadge = '<span style="color:#666;">⏳ En attente</span>';
+
+      let dateAffichee = e.date_examen_validee || e.date_examen_auto;
+      let actions = '';
+      
+      if (e.statut_examen !== 'approuve') {
+        actions = `<button class="btn btn-primary" onclick="approuverExamen(${e.id})">✅ Valider</button>
+                   <button class="btn" style="background:#FF9800; color:white;" onclick="modifierExamen(${e.id}, '${dateAffichee}')">✏️ Modifier</button>`;
+      } else {
+        actions = '<span style="color:#999;">Validé</span>';
+      }
+
+      return `<tr>
+        <td>${e.utp_id}</td>
+        <td>${e.nom} ${e.prenom}</td>
+        <td>${e.matiere} (${e.niveau})</td>
+        <td><strong>${dateAffichee}</strong></td>
+        <td>${statutBadge}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function approuverExamen(id) {
+  try {
+    await apiFetch('/api/direction/examens/' + id + '/approuver', 'POST');
+    alert('✅ Date d\'examen validée !');
+    await chargerExamens();
+  } catch(e) { alert(e.message); }
+}
+
+async function modifierExamen(id, dateActuelle) {
+  const nouvelleDate = prompt("Entrez la nouvelle date d'examen (format AAAA-MM-JJ) :", dateActuelle);
+  if (!nouvelleDate || nouvelleDate === dateActuelle) return;
+  try {
+    await apiFetch('/api/direction/examens/' + id + '/modifier', 'POST', { nouvelle_date: nouvelleDate });
+    alert('✅ Date modifiée avec succès !');
+    await chargerExamens();
+  } catch(e) { alert(e.message); }
+}
+
+// --- APPROBATION DES LIVRES ---
 async function chargerApprobations() {
   try {
     const eleves = await apiFetch('/api/etudiants');
@@ -131,6 +198,8 @@ async function approuverLivre(id) {
   if (!confirm("Confirmer la remise du livre ? L'élève passera en statut Actif.")) return;
   try { await apiFetch('/api/etudiants/' + id + '/valider-livre', 'POST'); alert('✅ Livre approuvé avec succès !'); await chargerApprobations(); } catch(e) { alert(e.message); }
 }
+
+// --- COMPTABILITÉ ---
 async function chargerCompta() {
   try {
     const compta = await apiFetch('/api/direction/compta-detaillee');
@@ -142,6 +211,8 @@ async function chargerCompta() {
     document.getElementById('listeCompta').innerHTML = html;
   } catch(e) { document.getElementById('listeCompta').innerHTML = `<div style="color:red; text-align:center;">Erreur : ${e.message}</div>`; }
 }
+
+// --- ÉLÈVES PAR CENTRE ---
 async function chargerElevesParCentre() {
   try {
     const eleves = await apiFetch('/api/etudiants');
@@ -163,6 +234,8 @@ async function telechargerPDFCentre(centreId, nomCentre) {
   html += `</tbody></table></body></html>`;
   const win = window.open('', '_blank'); win.document.write(html); win.document.close();
 }
+
+// --- COMMANDES LIVRES ---
 async function chargerLivres() {
   try {
     const livres = await apiFetch('/api/direction/livres');
