@@ -105,7 +105,13 @@
   <div id="ongletArchives" class="hidden">
     <div class="card">
       <h3>🗄️ Remise à zéro des listes (Fin de session)</h3>
-      <p style="font-size:13px; color:#666; margin-bottom:15px;">Cette action va masquer de la liste principale tous les élèves ayant dépassé les 70 jours (Anglais/Français) ou 100 jours (Allemand/Chinois). <strong>Leurs ID seront conservés pour une future réinscription.</strong></p>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">
+        Cette action va masquer de la liste principale tous les élèves ayant dépassé leur durée de formation (incluant le temps de repêchage). 
+        <br><br>
+        <strong>Anglais / Français :</strong> 80 jours.<br>
+        <strong>Allemand / Chinois :</strong> 110 jours.<br><br>
+        <strong>Leurs ID seront conservés pour une future réinscription.</strong>
+      </p>
       <button onclick="lancerArchivage()" style="padding:15px 30px; background:#C62828; color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;">⚠️ Lancer la remise à zéro</button>
       <div id="resultatArchive" style="margin-top:15px; font-weight:bold;"></div>
     </div>
