@@ -222,7 +222,7 @@ async function ajouterPaiement() {
 
     const r = await api('/api/paiements', 'POST', { etudiant_id, montant, tranche, mode_paiement, reference });
     
-    // HEURE DE MADAGASCAR
+    // Heure de Madagascar
     const dateNow = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Antananarivo' });
     
     const ticketHTML = `
@@ -572,4 +572,24 @@ async function commanderLivres() {
     document.querySelectorAll('.livre-input').forEach(input => input.value = 0);
     calculerTotalLivres();
   } catch (e) { alert(e.message); }
+}
+
+// --- DÉPENSES ---
+async function ajouterDepense() {
+  const libelle = document.getElementById('d-libelle').value.trim();
+  const montant = parseInt(document.getElementById('d-montant').value) || 0;
+  
+  if (!libelle || !montant) {
+    return alert('⚠️ Veuillez remplir le libellé et le montant.');
+  }
+  
+  // On utilise le centre actuellement sélectionné dans le formulaire d'inscription
+  const centre_id = parseInt($('#e-centre').value);
+  
+  try {
+    await api('/api/depenses', 'POST', { libelle, montant, centre_id });
+    alert('✅ Dépense enregistrée avec succès !');
+    document.getElementById('d-libelle').value = '';
+    document.getElementById('d-montant').value = '';
+  } catch (e) { alert('Erreur : ' + e.message); }
 }
