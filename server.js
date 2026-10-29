@@ -143,7 +143,7 @@ app.post('/api/paiements', authRole, (req, res) => {
   res.json({ ticket_ref, montant, nouveauMontant, badge_genere: badge });
 });
 
-// --- ROUTE DE COMMANDE DE LIVRES DÉTAILLÉE ---
+// --- COMMANDE DE LIVRES DÉTAILLÉE ---
 app.post('/api/livres/commander', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
   
@@ -160,8 +160,8 @@ app.post('/api/livres/commander', authRole, (req, res) => {
 
   if (total_livres === 0) return res.status(400).json({ error: 'Veuillez commander au moins un livre.' });
 
-  const info = db.prepare('INSERT INTO commandes_livres (centre_id, nombre_livres, montant_total) VALUES (?, ?, ?)')
-    .run(centre_id, total_livres, montant_total);
+  const info = db.prepare('INSERT INTO commandes_livres (centre_id, nombre_livres, montant_total, details) VALUES (?, ?, ?, ?)')
+    .run(centre_id, total_livres, montant_total, JSON.stringify(detail_livres));
   
   db.prepare('INSERT INTO depenses (centre_id, libelle, montant) VALUES (?, ?, ?)')
     .run(centre_id, 'Achat de livres (Versement Direction)', montant_total);
@@ -169,9 +169,23 @@ app.post('/api/livres/commander', authRole, (req, res) => {
   res.json({ id: info.lastInsertRowid, montant_total, total_livres });
 });
 
-app.get('/api/direction/livres', authRole, (req, res) => {
+// Route pour que la Direction voie le détail
+app.get('/api/direction/livres-details', authRole, (req, res) => {
   if (req.utilisateur.role !== 'direction') return res.status(403).json({ error: 'Direction requise' });
-  res.json(db.prepare(`SELECT cl.*, c.nom AS centre_nom FROM commandes_livres cl JOIN centres c ON c.id = cl.centre_id ORDER BY cl.id DESC`).all());
+  
+  const rows = db.prepare(`
+    SELECT cl.*, c.nom AS centre_nom 
+    FROM commandes_livres cl 
+    JOIN centres c ON c.id = cl.centre_id 
+    ORDER BY cl.id DESC
+  `).all();
+  
+  const result = rows.map(r => ({
+    ...r,
+    details: JSON.parse(r.details || '[]')
+  }));
+  
+  res.json(result);
 });
 
 app.post('/api/notes', authRole, (req, res) => {
