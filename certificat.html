@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UTP - Générateur de Certificat (Anglais L2)</title>
+<title>UTP - Générateur de Certificat</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
@@ -37,7 +37,6 @@
   .cert-saved { position:absolute; top: 8%; left: 5%; font-size: 14px; color:#000; font-family: Arial; font-weight:bold; }
   .cert-nom { position:absolute; top: 51.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:32px; font-weight:bold; color:#000; font-family: Arial; white-space:nowrap; }
   
-  /* On ajuste les blocs de texte pour qu'ils s'insèrent bien dans les lignes existantes */
   .cert-niveau-ligne { position:absolute; top: 57.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:16px; color:#000; font-family: Arial; }
   .cert-note-ligne { position:absolute; top: 60.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:15px; color:#000; font-family: Arial; }
   .cert-dates-ligne { position:absolute; top: 63.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:15px; color:#000; font-family: Arial; }
@@ -55,7 +54,8 @@
 <div class="container">
   <div class="header">
     <h1>🎓 Générateur de Certificat (Anglais L2)</h1>
-    <button class="btn-back" onclick="window.location.href='/'">⬅️ Retour au menu</button>
+    <!-- BOUTON RETOUR VERS LA DIRECTION -->
+    <button class="btn-back" onclick="window.location.href='/direction.html'">⬅️ Retour au tableau de bord</button>
   </div>
 
   <div class="form-group">
@@ -96,9 +96,9 @@ var eleveActuel = null;
 
 const API_BASE = '';
 function apiHeaders() {
-  const code = sessionStorage.getItem('utp_code') || prompt('Code d\'accès Direction ?');
-  if (code) sessionStorage.setItem('utp_code', code);
-  return { 'Content-Type': 'application/json', 'x-code-acces': code || '' };
+  const code = sessionStorage.getItem('utp_code') || 'COORDO0009';
+  sessionStorage.setItem('utp_code', code);
+  return { 'Content-Type': 'application/json', 'x-code-acces': code };
 }
 
 async function apiFetch(path) {
@@ -117,10 +117,10 @@ async function chercherEleve() {
   try {
     const eleves = await apiFetch('/api/etudiants');
     
-    // On cherche l'élève spécifiquement en Anglais L2
+    // On cherche un élève en Anglais L2
     const found = eleves.find(e => 
       (e.utp_id.toLowerCase() === query || (e.nom + ' ' + e.prenom).toLowerCase().includes(query))
-      && e.matiere === 'Anglais' && e.niveau === 'L2' // Filtre strict
+      && e.matiere === 'Anglais' && e.niveau === 'L2'
     );
 
     if (!found) {
@@ -135,10 +135,9 @@ async function chercherEleve() {
     status.textContent = "✅ Élève éligible : " + found.nom + " " + found.prenom + " (Anglais L2)";
     status.style.color = "#2E7D32";
 
-    // Gestion des dates
     var dateDebut = new Date(found.date_entree);
     var dateFin = new Date(dateDebut);
-    dateFin.setMonth(dateFin.getMonth() + 4); // Durée de 4 mois pour l'anglais
+    dateFin.setMonth(dateFin.getMonth() + 4);
     
     document.getElementById('dateDebut').valueAsDate = dateDebut;
     document.getElementById('dateFin').valueAsDate = dateFin;
@@ -150,7 +149,6 @@ async function chercherEleve() {
   }
 }
 
-// Formate la date en anglais (ex: June 30th, 2026)
 function formatEnglishDate(dateStr) {
   if (!dateStr) return '—';
   var d = new Date(dateStr);
@@ -171,31 +169,21 @@ async function genererApercu(eleve) {
   var nomComplet = eleve.nom + ' ' + (eleve.prenom || '');
   document.getElementById('cert-nom').textContent = nomComplet.toUpperCase();
   
-  // ID
   document.getElementById('cert-saved').innerHTML = 'Saved as <span style="color:#C62828">' + eleve.utp_id + '</span> / 2026<br>On ' + formatEnglishDate(new Date());
   
-  // Récupération de la note de l'élève
   let note = 0;
   try {
     const notes = await apiFetch('/api/notes/' + eleve.id);
-    if (notes && notes.length > 0) {
-      // On prend la note la plus récente
-      note = notes[0].total; 
-    }
-  } catch (e) {
-    console.log("Pas de note trouvée pour cet élève.");
-  }
+    if (notes && notes.length > 0) note = notes[0].total; 
+  } catch (e) { console.log("Pas de note."); }
 
-  // Détermination de la mention selon la note
   let mention = "GOOD ENOUGH";
   if (note >= 86) mention = "EXCELLENT";
   else if (note >= 76) mention = "VERY GOOD";
   else if (note >= 66) mention = "GOOD";
   else if (note >= 50) mention = "GOOD ENOUGH";
-  else mention = "REPÊCHAGE NÉCESSAIRE";
 
   document.getElementById('cert-grade').textContent = mention;
-  document.getElementById('cert-note').style.display = 'block';
 
   document.getElementById('certificat-preview').style.display = 'block';
   document.getElementById('btnImprimer').style.display = 'inline-block';
@@ -216,26 +204,15 @@ function telechargerImage(elementId, filename) {
   var element = document.getElementById(elementId);
   html2canvas(element, { useCORS: true, allowTaint: true, scale: 2 }).then(function(canvas) {
     var dataUrl = canvas.toDataURL('image/png');
-    
     var win = window.open('', '_blank');
     win.document.write(`
-      <html>
-      <head>
-        <title>${filename}</title>
-        <style>
-          body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f0f0; }
-          img { max-width: 100%; max-height: 100%; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
-          @media print {
-            @page { size: landscape; margin: 0; }
-            body { background: white; height: auto; }
-            img { max-width: 100%; max-height: 100%; box-shadow: none; margin: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <img src="${dataUrl}" onload="window.print();">
-      </body>
-      </html>
+      <html><head><title>${filename}</title>
+      <style>
+        body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f0f0; }
+        img { max-width: 100%; max-height: 100%; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+        @media print { @page { size: landscape; margin: 0; } body { background: white; height: auto; } img { max-width: 100%; max-height: 100%; box-shadow: none; margin: 0; } }
+      </style></head>
+      <body><img src="${dataUrl}" onload="window.print();"></body></html>
     `);
     win.document.close();
   });
