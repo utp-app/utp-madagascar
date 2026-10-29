@@ -75,7 +75,7 @@
     </div>
     <div class="card">
       <h3>📋 Liste des responsables</h3>
-      <table><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Téléphone</th><th>Centres gérés</th></tr></thead><tbody id="tbodyUsers"></tbody></table>
+      <table><thead><tr><th>ID</th><th>Nom</th><th>Code</th><th>Téléphone</th><th>Centres gérés</th><th>Action</th></tr></thead><tbody id="tbodyUsers"></tbody></table>
     </div>
   </div>
 
@@ -202,8 +202,17 @@ async function creerCentre() {
 async function chargerUtilisateurs() {
   const users = await apiFetch('/api/responsables');
   const tbody = document.getElementById('tbodyUsers');
-  if (!users || users.length === 0) { tbody.innerHTML = '<tr><td colspan="5">Aucun responsable trouvé.</td></tr>'; return; }
-  tbody.innerHTML = users.map(u => `<tr><td>${u.id}</td><td>${u.nom}</td><td>${u.code_acces}</td><td>${u.telephone || '-'}</td><td>${u.centres_noms || '-'}</td></tr>`).join('');
+  if (!users || users.length === 0) { tbody.innerHTML = '<tr><td colspan="6">Aucun responsable trouvé.</td></tr>'; return; }
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td>${u.id}</td>
+      <td>${u.nom}</td>
+      <td>${u.code_acces}</td>
+      <td>${u.telephone || '-'}</td>
+      <td>${u.centres_noms || '-'}</td>
+      <td><button class="btn" style="background:#FF9800; color:white; padding:5px 10px; font-size:11px;" onclick="modifierTelephone(${u.id}, '${u.telephone || ''}')">✏️ Modifier</button></td>
+    </tr>
+  `).join('');
 }
 async function creerUtilisateur() {
   const nom = document.getElementById('newUserName').value;
@@ -220,6 +229,15 @@ async function creerUtilisateur() {
     document.getElementById('newUserTel').value = '';
     await chargerUtilisateurs();
   } catch(e) { alert(e.message); }
+}
+async function modifierTelephone(id, telActuel) {
+  const nouveauTel = prompt("Entrez le nouveau numéro de téléphone (ou WhatsApp) :", telActuel);
+  if (nouveauTel === null || nouveauTel === telActuel) return;
+  try {
+    await apiFetch('/api/admin/responsables/' + id + '/telephone', 'PUT', { telephone: nouveauTel });
+    alert('✅ Numéro mis à jour avec succès !');
+    await chargerUtilisateurs();
+  } catch (e) { alert(e.message); }
 }
 
 // --- GESTION DES ÉLÈVES ---
