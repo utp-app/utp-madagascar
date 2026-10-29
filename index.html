@@ -34,27 +34,39 @@
          ============================================== -->
     <div id="interface-responsable" style="display:none;">
       
-      <!-- LE MENU EST BIEN ICI (EN HAUT) -->
       <nav>
         <button onclick="showTab('etudiants')">Étudiants</button>
         <button onclick="showTab('paiements')">Paiements</button>
         <button onclick="showTab('notes')">Notes</button>
         <button onclick="showTab('livres')">📚 Livres</button>
         <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
-        <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
+        <button id="btn-deconnexion" onclick="logout()">Déconnexion</button>
       </nav>
 
       <!-- Onglet Étudiants (Inscription) -->
       <div id="tab-etudiants" class="tab active">
         <h2 style="text-align: center; color: #1e3a5f;">Inscrire un étudiant</h2>
+        
         <div class="card" id="form-etudiant">
-          <input id="e-nom" placeholder="Nom" required />
-          <input id="e-prenom" placeholder="Prénom" required />
-          <input id="e-tel" placeholder="Contact (Téléphone)" required />
-          <select id="e-matiere" required></select>
-          <select id="e-niveau" required></select>
-          <select id="e-centre" required></select>
-          <input id="e-date" type="date" required />
+          <!-- LIGNE 1 : Nom, Prénom, Contact -->
+          <div class="form-row">
+            <input id="e-nom" placeholder="Nom" required />
+            <input id="e-prenom" placeholder="Prénom" required />
+            <input id="e-tel" placeholder="Contact (Téléphone)" required />
+          </div>
+          
+          <!-- LIGNE 2 : Matière, Niveau -->
+          <div class="form-row">
+            <select id="e-matiere" required></select>
+            <select id="e-niveau" required></select>
+          </div>
+          
+          <!-- LIGNE 3 : Centre, Date -->
+          <div class="form-row">
+            <select id="e-centre" required></select>
+            <input id="e-date" type="date" required />
+          </div>
+          
           <button class="btn-submit" onclick="ajouterEtudiant()">Ajouter l'élève</button>
         </div>
         
@@ -71,29 +83,40 @@
         <div class="card">
           <select id="p-etudiant" style="margin-bottom:15px;"></select>
           
-          <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Montant total de la formation (Ar)</label>
-          <input id="p-total" type="number" value="50000" placeholder="Montant total" style="margin-bottom:15px;" oninput="calculerReste()" />
-          
-          <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Montant versé maintenant (Ar)</label>
-          <input id="p-montant" type="number" placeholder="Montant versé" style="margin-bottom:15px;" oninput="calculerReste()" />
-          
-          <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Reste à payer (Ar)</label>
-          <input id="p-reste" type="text" readonly placeholder="Reste à payer" style="background:#eee; font-weight:bold; color:#C62828; margin-bottom:15px;" />
+          <div class="form-row">
+            <div>
+              <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Montant total (Ar)</label>
+              <input id="p-total" type="number" value="50000" placeholder="Montant total" oninput="calculerReste()" />
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Montant versé (Ar)</label>
+              <input id="p-montant" type="number" placeholder="Montant versé" oninput="calculerReste()" />
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Reste à payer (Ar)</label>
+              <input id="p-reste" type="text" readonly placeholder="Reste à payer" style="background:#eee; font-weight:bold; color:#C62828;" />
+            </div>
+          </div>
 
-          <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Type de paiement</label>
-          <select id="p-tranche" style="margin-bottom:15px;">
-            <option value="total">Total</option>
-            <option value="tranche1">Tranche 1</option>
-            <option value="tranche2">Tranche 2</option>
-          </select>
-
-          <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Mode de paiement</label>
-          <select id="p-mode" style="margin-bottom:15px;" onchange="toggleReference()">
-            <option value="Espèce">Espèce</option>
-            <option value="Mobile Money">Mobile Money</option>
-            <option value="Virement">Virement</option>
-            <option value="Chèque">Chèque</option>
-          </select>
+          <div class="form-row">
+            <div>
+              <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Type de paiement</label>
+              <select id="p-tranche">
+                <option value="total">Total</option>
+                <option value="tranche1">Tranche 1</option>
+                <option value="tranche2">Tranche 2</option>
+              </select>
+            </div>
+            <div>
+              <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Mode de paiement</label>
+              <select id="p-mode" onchange="toggleReference()">
+                <option value="Espèce">Espèce</option>
+                <option value="Mobile Money">Mobile Money</option>
+                <option value="Virement">Virement</option>
+                <option value="Chèque">Chèque</option>
+              </select>
+            </div>
+          </div>
           
           <input id="p-reference" type="text" placeholder="Référence (N° transaction)" style="display:none; margin-bottom:15px;" />
           
@@ -122,8 +145,10 @@
         <h2 style="text-align: center; color: #1e3a5f;">Commander des livres</h2>
         <div class="card">
           <p style="font-size:13px; color:#666; margin-bottom:15px; text-align:center;">Chaque livre coûte 20 000 Ar. Le montant sera automatiquement déduit de votre caisse et versé à la Direction.</p>
-          <input id="l-nombre" type="number" placeholder="Nombre de livres à commander" style="margin-bottom:15px;" />
-          <input id="l-total" type="text" readonly placeholder="Montant total (Ar)" style="background:#eee; margin-bottom:15px;" />
+          <div class="form-row">
+            <input id="l-nombre" type="number" placeholder="Nombre de livres à commander" />
+            <input id="l-total" type="text" readonly placeholder="Montant total (Ar)" style="background:#eee;" />
+          </div>
           <button class="btn-submit" onclick="commanderLivres()">Envoyer la commande à la Direction</button>
         </div>
       </div>
