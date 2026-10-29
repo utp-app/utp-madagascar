@@ -620,6 +620,13 @@ async function chargerDashboard() {
         </div>
       </div>
       
+      <!-- BOUTON DE TÉLÉCHARGEMENT PDF -->
+      <div style="text-align:right; margin-bottom:20px;">
+        <button onclick="telechargerRapportFinancierPDF()" style="padding:12px 20px; background:#1A237E; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">
+          🖨️ Télécharger le rapport (PDF)
+        </button>
+      </div>
+      
       <h3>Détail par centre :</h3>
       <table style="margin-top:10px; margin-bottom: 30px;">
         <thead><tr><th>Centre</th><th>Recettes</th><th>Dépenses</th><th>Solde</th></tr></thead>
@@ -670,4 +677,105 @@ async function chargerDashboard() {
   } catch (e) {
     document.getElementById('dashboard-content').innerHTML = `<p style="color:red;">Erreur : ${e.message}</p>`;
   }
+}
+
+// --- GÉNÉRATION DU PDF DU RAPPORT FINANCIER ---
+async function telechargerRapportFinancierPDF() {
+  try {
+    const stats = await api('/api/responsable/stats');
+    const mouvements = await api('/api/responsable/rapport-comptable');
+    
+    const dateNow = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Antananarivo' });
+    
+    let lignesCentres = '';
+    stats.detailCentres.forEach(c => {
+      let color = c.solde >= 0 ? '#2E7D32' : '#C62828';
+      lignesCentres += `
+        <tr>
+          <td style="padding:10px; border-bottom:1px solid #ddd;">${c.nom}</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; color:#2E7D32;">+${c.recettes.toLocaleString()} Ar</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; color:#C62828;">-${c.depenses.toLocaleString()} Ar</td>
+          <td style="padding:10px; border-bottom:1px solid #ddd; color:${color}; font-weight:bold;">${c.solde.toLocaleString()} Ar</td>
+        </tr>
+      `;
+    });
+
+    let lignesMouvements = '';
+    mouvements.forEach(m => {
+      let color = m.type === 'Recette' ? '#2E7D32' : '#C62828';
+      let signe = m.type === 'Recette' ? '+' : '-';
+      lignesMouvements += `
+        <tr>
+          <td style="padding:8px; border-bottom:1px solid #ddd;">${new Date(m.date).toLocaleDateString('fr-FR')}</td>
+          <td style="padding:8px; border-bottom:1px solid #ddd;">${m.type}</td>
+          <td style="padding:8px; border-bottom:1px solid #ddd;">${m.centre_nom}</td>
+          <td style="padding:8px; border-bottom:1px solid #ddd;">${m.libelle}</td>
+          <td style="padding:8px; border-bottom:1px solid #ddd; color:${color}; font-weight:bold;">${signe}${m.montant.toLocaleString()} Ar</td>
+        </tr>
+      `;
+    });
+
+    const html = `
+      <html>
+      <head>
+        <title>Rapport Financier - UTP</title>
+        <style>
+          @media print { @page { size: A4; margin: 15mm; } body { padding: 0; } .no-print { display: none !important; } }
+          body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; max-width: 1000px; margin: 0 auto; color: #333; }
+          .header { text-align: center; border-bottom: 3px solid #1A237E; padding-bottom: 20px; margin-bottom: 30px; }
+          .header img { width: 80px; height: 80px; border-radius: 50%; }
+          .header h1 { color: #1A237E; margin: 10px 0; font-size: 24px; }
+          .header p { color: #666; margin: 0; font-size: 14px; }
+          .stats-box { display: flex; justify-content: space-between; margin-bottom: 30px; gap: 15px; }
+          .stat-card { flex: 1; padding: 20px; border-radius: 8px; text-align: center; }
+          .stat-card h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; }
+          .stat-card .value { font-size: 24px; font-weight: bold; }
+          .green { background: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
+          .red { background: #FFEBEE; color: #C62828; border: 1px solid #FFCDD2; }
+          .blue { background: #E3F2FD; color: #1565C0; border: 1px solid #BBDEFB; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; }
+          th { background: #1A237E; color: white; padding: 12px; text-align: left; }
+          .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+          .btn-print { display: block; width: 100%; padding: 15px; margin-top: 30px; background: #1A237E; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <img src="/logo.png" alt="Logo UTP">
+          <h1>UTP MADAGASCAR</h1>
+          <p>Rapport d'État Financier</p>
+          <p>Généré le : ${dateNow}</p>
+        </div>
+        
+        <div class="stats-box">
+          <div class="stat-card green"><h3>Total Recettes</h3><div class="value">+${stats.totalRecettes.toLocaleString()} Ar</div></div>
+          <div class="stat-card red"><h3>Total Dépenses</h3><div class="value">-${stats.totalDepenses.toLocaleString()} Ar</div></div>
+          <div class="stat-card blue"><h3>Solde Global</h3><div class="value">${stats.solde.toLocaleString()} Ar</div></div>
+        </div>
+
+        <h3>Détail par Centre</h3>
+        <table>
+          <thead><tr><th>Centre</th><th>Recettes</th><th>Dépenses</th><th>Solde</th></tr></thead>
+          <tbody>${lignesCentres}</tbody>
+        </table>
+
+        <h3>Journal des Mouvements</h3>
+        <table>
+          <thead><tr><th>Date</th><th>Type</th><th>Centre</th><th>Libellé</th><th>Montant</th></tr></thead>
+          <tbody>${lignesMouvements}</tbody>
+        </table>
+        
+        <div class="footer">
+          <p>Ce document est généré automatiquement par l'application UTP Madagascar.</p>
+        </div>
+        
+        <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+      </body>
+      </html>
+    `;
+
+    const win = window.open('', '_blank');
+    win.document.write(html);
+    win.document.close();
+  } catch (e) { alert('Erreur : ' + e.message); }
 }
