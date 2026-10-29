@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS responsables (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nom TEXT NOT NULL,
   code_acces TEXT NOT NULL UNIQUE,
+  telephone TEXT,
   centre_id INTEGER REFERENCES centres(id) ON DELETE SET NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );
@@ -83,7 +84,7 @@ CREATE TABLE IF NOT EXISTS commandes_livres (
   centre_id INTEGER NOT NULL REFERENCES centres(id) ON DELETE CASCADE,
   nombre_livres INTEGER NOT NULL,
   montant_total INTEGER NOT NULL,
-  details TEXT, -- NOUVEAU : Stocke le détail JSON (matière, niveau, quantité)
+  details TEXT,
   statut TEXT NOT NULL DEFAULT 'en_attente',
   date_commande TEXT DEFAULT (datetime('now'))
 );
