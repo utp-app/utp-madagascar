@@ -57,7 +57,6 @@
     <button class="nav-tab" id="navLivres" onclick="changerOnglet('livres')">📚 Commandes Livres</button>
   </div>
 
-  <!-- ONGLET PLANNING EXAMENS -->
   <div id="ongletExamens">
     <div class="card">
       <h3>📅 Validation des dates d'examen</h3>
@@ -72,6 +71,7 @@
   <div id="ongletAppro" class="hidden">
     <div class="card">
       <h3>✅ Élèves en attente d'approbation pour le livre</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Ces élèves ont payé les 20 000 Ar. Approuvez-les pour les passer en "Actif".</p>
       <table>
         <thead><tr><th>ID</th><th>Nom complet</th><th>Centre</th><th>Montant payé</th><th>Action</th></tr></thead>
         <tbody id="tbodyAppro"><tr><td colspan="5" class="loading">Chargement...</td></tr></tbody>
@@ -93,8 +93,9 @@
   <div id="ongletLivres" class="hidden">
     <div class="card">
       <h3>📚 Commandes de livres reçues</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Les responsables ont versé ces montants dans la caisse de la Direction.</p>
       <table>
-        <thead><tr><th>Date</th><th>Centre</th><th>Nombre de livres</th><th>Montant (Ar)</th><th>Statut</th></tr></thead>
+        <thead><tr><th>Date</th><th>Centre</th><th>Détail de la commande</th><th>Total (Ar)</th><th>Statut</th></tr></thead>
         <tbody id="tbodyLivres"><tr><td colspan="5" class="loading">Chargement...</td></tr></tbody>
       </table>
     </div>
@@ -108,6 +109,7 @@ function apiHeaders() {
   sessionStorage.setItem('utp_code', code);
   return { 'Content-Type': 'application/json', 'x-code-acces': code };
 }
+
 async function apiFetch(path, method = 'GET', body = null) {
   const opts = { method, headers: apiHeaders() };
   if (body) opts.body = JSON.stringify(body);
@@ -115,6 +117,7 @@ async function apiFetch(path, method = 'GET', body = null) {
   if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erreur API');
   return r.json();
 }
+
 window.onload = async function() {
   await chargerExamens();
   await chargerApprobations();
@@ -122,6 +125,7 @@ window.onload = async function() {
   await chargerElevesParCentre();
   await chargerLivres();
 };
+
 function changerOnglet(onglet) {
   ['examens', 'appro','compta','eleves','livres'].forEach(o => {
     document.getElementById('nav' + o.charAt(0).toUpperCase() + o.slice(1)).classList.remove('active');
@@ -225,6 +229,7 @@ async function chargerElevesParCentre() {
     document.getElementById('listeCentresPDF').innerHTML = html;
   } catch(e) { console.error(e); }
 }
+
 async function telechargerPDFCentre(centreId, nomCentre) {
   const eleves = await apiFetch('/api/etudiants');
   const elevesCentre = eleves.filter(e => e.centre_id === centreId);
@@ -238,10 +243,16 @@ async function telechargerPDFCentre(centreId, nomCentre) {
 // --- COMMANDES LIVRES ---
 async function chargerLivres() {
   try {
-    const livres = await apiFetch('/api/direction/livres');
+    const livres = await apiFetch('/api/direction/livres-details');
     const tbody = document.getElementById('tbodyLivres');
-    if (livres.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune commande pour le moment.</td></tr>'; return; }
-    tbody.innerHTML = livres.map(l => `<tr><td>${new Date(l.date_commande).toLocaleDateString('fr-FR')}</td><td>${l.centre_nom}</td><td>${l.nombre_livres}</td><td style="color:#2E7D32; font-weight:bold;">${l.montant_total.toLocaleString()} Ar</td><td>${l.statut === 'valide' ? '✅ Validé' : '⏳ En attente'}</td></tr>`).join('');
+    if (livres.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Aucune commande pour le moment.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = livres.map(l => {
+      let detailsHTML = l.details.map(d => `<div>${d.matiere} ${d.niveau} : <strong>${d.nombre}</strong></div>`).join('');
+      return `<tr><td>${new Date(l.date_commande).toLocaleDateString('fr-FR')}</td><td>${l.centre_nom}</td><td>${detailsHTML}</td><td style="color:#2E7D32; font-weight:bold;">${l.montant_total.toLocaleString()} Ar</td><td>${l.statut === 'valide' ? '✅ Validé' : '⏳ En attente'}</td></tr>`;
+    }).join('');
   } catch(e) { console.error(e); }
 }
 </script>
