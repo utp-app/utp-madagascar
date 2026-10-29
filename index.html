@@ -36,6 +36,7 @@
         <button onclick="showTab('paiements')">Paiements</button>
         <button onclick="showTab('notes')">Notes</button>
         <button onclick="showTab('livres')">📚 Livres</button>
+        <button onclick="showTab('depenses')">💸 Dépenses</button>
         <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
         <button id="btn-deconnexion" onclick="logout()">Déconnexion</button>
       </nav>
@@ -161,6 +162,16 @@
           </div>
 
           <button class="btn-submit" onclick="commanderLivres()" style="margin-top:20px;">Envoyer la commande à la Direction</button>
+        </div>
+      </div>
+
+      <!-- Onglet Dépenses -->
+      <div id="tab-depenses" class="tab">
+        <h2 style="text-align: center; color: #1e3a5f;">Enregistrer une dépense</h2>
+        <div class="card">
+          <input id="d-libelle" placeholder="Libellé (ex: Loyer, Salaire...)" style="margin-bottom:15px;" />
+          <input id="d-montant" type="number" placeholder="Montant (Ar)" style="margin-bottom:15px;" />
+          <button class="btn-submit" onclick="ajouterDepense()">Enregistrer la dépense</button>
         </div>
       </div>
     </div>
