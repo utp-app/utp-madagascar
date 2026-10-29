@@ -29,9 +29,6 @@
   <!-- ÉCRAN PRINCIPAL -->
   <section id="main-screen" class="screen">
     
-    <!-- ==============================================
-         INTERFACE RÉSERVÉE AUX RESPONSABLES DE CENTRE 
-         ============================================== -->
     <div id="interface-responsable" style="display:none;">
       
       <nav>
@@ -48,20 +45,17 @@
         <h2 style="text-align: center; color: #1e3a5f;">Inscrire un étudiant</h2>
         
         <div class="card" id="form-etudiant">
-          <!-- LIGNE 1 : Nom, Prénom, Contact -->
           <div class="form-row">
             <input id="e-nom" placeholder="Nom" required />
             <input id="e-prenom" placeholder="Prénom" required />
             <input id="e-tel" placeholder="Contact (Téléphone)" required />
           </div>
           
-          <!-- LIGNE 2 : Matière, Niveau -->
           <div class="form-row">
             <select id="e-matiere" required></select>
             <select id="e-niveau" required></select>
           </div>
           
-          <!-- LIGNE 3 : Centre, Date -->
           <div class="form-row">
             <select id="e-centre" required></select>
             <input id="e-date" type="date" required />
@@ -116,6 +110,13 @@
                 <option value="Chèque">Chèque</option>
               </select>
             </div>
+            <div>
+              <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Format ticket</label>
+              <select id="p-format">
+                <option value="80">80 mm</option>
+                <option value="58">58 mm</option>
+              </select>
+            </div>
           </div>
           
           <input id="p-reference" type="text" placeholder="Référence (N° transaction)" style="display:none; margin-bottom:15px;" />
@@ -144,19 +145,26 @@
       <div id="tab-livres" class="tab">
         <h2 style="text-align: center; color: #1e3a5f;">Commander des livres</h2>
         <div class="card">
-          <p style="font-size:13px; color:#666; margin-bottom:15px; text-align:center;">Chaque livre coûte 20 000 Ar. Le montant sera automatiquement déduit de votre caisse et versé à la Direction.</p>
-          <div class="form-row">
-            <input id="l-nombre" type="number" placeholder="Nombre de livres à commander" />
-            <input id="l-total" type="text" readonly placeholder="Montant total (Ar)" style="background:#eee;" />
+          <p style="font-size:13px; color:#666; margin-bottom:15px; text-align:center;">Chaque livre coûte 20 000 Ar. Indiquez les quantités par matière et niveau.</p>
+          
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr><th style="background:#1e3a5f; color:white; padding:10px; text-align:left;">Matière / Niveau</th><th style="background:#1e3a5f; color:white; padding:10px; text-align:center;">Quantité</th></tr>
+            </thead>
+            <tbody id="tbody-commande-livres">
+              <!-- Les lignes seront générées par le JS -->
+            </tbody>
+          </table>
+
+          <div style="margin-top:20px; font-size:18px; font-weight:bold; text-align:center; color:#1A237E;">
+            TOTAL : <span id="total-livres-affiche">0</span> livres = <span id="total-montant-affiche">0</span> Ar
           </div>
-          <button class="btn-submit" onclick="commanderLivres()">Envoyer la commande à la Direction</button>
+
+          <button class="btn-submit" onclick="commanderLivres()" style="margin-top:20px;">Envoyer la commande à la Direction</button>
         </div>
       </div>
     </div>
 
-    <!-- ==============================================
-         INTERFACE RÉSERVÉE À L'ADMIN ET LA DIRECTION 
-         ============================================== -->
     <div id="interface-admin-direction" style="display:none; text-align:center; margin-top: 50px;">
       <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; padding: 20px; font-size: 18px; background:#00897B; color:white; border-radius:10px; cursor:pointer; margin:10px; width:auto; border:none;">⚙️ Paramétrage Admin</button>
       <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; padding: 20px; font-size: 18px; background:#E65100; color:white; border-radius:10px; cursor:pointer; margin:10px; width:auto; border:none;">⭐ Tableau de Bord Direction</button>
