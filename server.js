@@ -249,6 +249,14 @@ app.post('/api/archiver-expires', authRole, (req, res) => {
   res.json({ archives, message: `${archives} élèves archivés avec succès.` });
 });
 
+// NOUVELLE ROUTE : Nettoyage des archives
+app.post('/api/admin/nettoyer-archives', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  const count = db.prepare("SELECT COUNT(*) as c FROM etudiants WHERE statut = 'archive'").get().c;
+  db.prepare("DELETE FROM etudiants WHERE statut = 'archive'").run();
+  res.json({ message: `${count} élèves archivés ont été supprimés définitivement.` });
+});
+
 app.get('/api/direction/compta-detaillee', authRole, (req, res) => {
   if (req.utilisateur.role !== 'direction') return res.status(403).json({ error: 'Direction requise' });
   const centres = db.prepare('SELECT * FROM centres').all();
@@ -278,12 +286,9 @@ setInterval(() => {
       count++;
     }
   }
-  if (count > 0) {
-    console.log(`✅ ${count} élève(s) archivé(s) automatiquement.`);
-  } else {
-    console.log("✅ Aucun élève à archiver aujourd'hui.");
-  }
-}, 24 * 60 * 60 * 1000); // 24 heures
+  if (count > 0) console.log(`✅ ${count} élève(s) archivé(s) automatiquement.`);
+  else console.log("✅ Aucun élève à archiver aujourd'hui.");
+}, 24 * 60 * 60 * 1000);
 
 /* ============================================================
    DÉMARRAGE DU SERVEUR
@@ -292,7 +297,6 @@ setInterval(() => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`UTP App démarrée sur le port ${PORT}`);
-  // Vérification immédiate au démarrage
   console.log("Vérification initiale des expirations...");
   const eleves = db.prepare("SELECT id, matiere, date_entree FROM etudiants WHERE statut = 'actif'").all();
   let count = 0;
