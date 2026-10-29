@@ -227,7 +227,6 @@ async function ajouterPaiement() {
 
     const r = await api('/api/paiements', 'POST', { etudiant_id, montant, tranche, mode_paiement, reference });
     
-    // Heure de Madagascar
     const dateNow = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Antananarivo' });
     
     const ticketHTML = `
@@ -595,7 +594,7 @@ async function ajouterDepense() {
     alert('✅ Dépense enregistrée avec succès !');
     document.getElementById('d-libelle').value = '';
     document.getElementById('d-montant').value = '';
-    await chargerDashboard(); // Rafraîchir le tableau de bord
+    await chargerDashboard();
   } catch (e) { alert('Erreur : ' + e.message); }
 }
 
@@ -603,6 +602,7 @@ async function ajouterDepense() {
 async function chargerDashboard() {
   try {
     const stats = await api('/api/responsable/stats');
+    const mouvements = await api('/api/responsable/rapport-comptable');
     
     let html = `
       <div style="display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap;">
@@ -621,7 +621,7 @@ async function chargerDashboard() {
       </div>
       
       <h3>Détail par centre :</h3>
-      <table style="margin-top:10px;">
+      <table style="margin-top:10px; margin-bottom: 30px;">
         <thead><tr><th>Centre</th><th>Recettes</th><th>Dépenses</th><th>Solde</th></tr></thead>
         <tbody>
     `;
@@ -638,6 +638,32 @@ async function chargerDashboard() {
       `;
     });
     
+    html += `</tbody></table>`;
+
+    html += `<h3>📊 Journal des Mouvements Financiers</h3>`;
+    html += `<table style="margin-top:10px;">
+      <thead><tr><th>Date</th><th>Type</th><th>Centre</th><th>Libellé</th><th>Montant</th></tr></thead>
+      <tbody>`;
+      
+    if (mouvements.length === 0) {
+      html += `<tr><td colspan="5" style="text-align:center;">Aucun mouvement enregistré.</td></tr>`;
+    } else {
+      mouvements.forEach(m => {
+        let color = m.type === 'Recette' ? '#2E7D32' : '#C62828';
+        let signe = m.type === 'Recette' ? '+' : '-';
+        let icon = m.type === 'Recette' ? '🟢' : '🔴';
+        
+        html += `
+          <tr>
+            <td>${new Date(m.date).toLocaleDateString('fr-FR')}</td>
+            <td>${icon} ${m.type}</td>
+            <td>${m.centre_nom}</td>
+            <td>${m.libelle}</td>
+            <td style="color:${color}; font-weight:bold;">${signe}${m.montant.toLocaleString()} Ar</td>
+          </tr>
+        `;
+      });
+    }
     html += `</tbody></table>`;
     
     document.getElementById('dashboard-content').innerHTML = html;
