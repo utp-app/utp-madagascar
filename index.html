@@ -32,6 +32,7 @@
     <div id="interface-responsable" style="display:none;">
       
       <nav>
+        <button onclick="showTab('dashboard')">📊 Tableau de Bord</button>
         <button onclick="showTab('etudiants')">Étudiants</button>
         <button onclick="showTab('paiements')">Paiements</button>
         <button onclick="showTab('notes')">Notes</button>
@@ -41,8 +42,16 @@
         <button id="btn-deconnexion" onclick="logout()">Déconnexion</button>
       </nav>
 
+      <!-- Onglet Tableau de Bord -->
+      <div id="tab-dashboard" class="tab active">
+        <h2 style="text-align: center; color: #1e3a5f;">Mon Tableau de Bord</h2>
+        <div id="dashboard-content">
+          <div class="loading">Chargement...</div>
+        </div>
+      </div>
+
       <!-- Onglet Étudiants (Inscription) -->
-      <div id="tab-etudiants" class="tab active">
+      <div id="tab-etudiants" class="tab">
         <h2 style="text-align: center; color: #1e3a5f;">Inscrire un étudiant</h2>
         
         <div class="card" id="form-etudiant">
