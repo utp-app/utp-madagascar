@@ -128,6 +128,31 @@
 
 </div>
 
+<!-- FENÊTRE MODALE DE MODIFICATION -->
+<div id="modalModifier" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:white; padding:30px; border-radius:12px; width:100%; max-width:500px;">
+    <h3 style="color:#1A237E; margin-bottom:20px;">✏️ Modifier l'élève</h3>
+    <input type="hidden" id="mod-id" />
+    <div class="form-row"><div class="form-group"><label>Nom</label><input type="text" id="mod-nom" /></div></div>
+    <div class="form-row"><div class="form-group"><label>Prénom</label><input type="text" id="mod-prenom" /></div></div>
+    <div class="form-row"><div class="form-group"><label>Téléphone</label><input type="text" id="mod-tel" /></div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Matière</label><input type="text" id="mod-matiere" /></div>
+      <div class="form-group"><label>Niveau</label><input type="text" id="mod-niveau" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Centre (ID)</label><input type="number" id="mod-centre" /></div>
+      <div class="form-group"><label>Montant payé (Ar)</label><input type="number" id="mod-montant" /></div>
+    </div>
+    <div class="form-row"><div class="form-group"><label>Date d'entrée</label><input type="date" id="mod-date" /></div></div>
+    
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+      <button class="btn" style="background:#ccc;" onclick="fermerModification()">Annuler</button>
+      <button class="btn btn-primary" onclick="sauvegarderModification()">Enregistrer les modifications</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API_BASE = '';
 function apiHeaders() { return { 'Content-Type': 'application/json', 'x-code-acces': 'ADMIN2030' }; }
@@ -156,6 +181,7 @@ function changerOnglet(onglet) {
   document.getElementById('onglet' + onglet.charAt(0).toUpperCase() + onglet.slice(1)).classList.remove('hidden');
 }
 
+// --- GESTION DES CENTRES ---
 async function chargerCentres() {
   const centres = await apiFetch('/api/centres');
   document.getElementById('tbodyCentres').innerHTML = centres.map(c => `<tr><td>${c.id}</td><td>${c.nom}</td></tr>`).join('');
@@ -170,6 +196,8 @@ async function creerCentre() {
   document.getElementById('newCentreNom').value = '';
   await chargerCentres();
 }
+
+// --- GESTION DES UTILISATEURS ---
 async function chargerUtilisateurs() {
   const users = await apiFetch('/api/responsables');
   const tbody = document.getElementById('tbodyUsers');
@@ -190,12 +218,25 @@ async function creerUtilisateur() {
     await chargerUtilisateurs();
   } catch(e) { alert(e.message); }
 }
+
+// --- GESTION DES ÉLÈVES ---
 async function chargerEleves() {
   try {
     const eleves = await apiFetch('/api/etudiants');
     const tbody = document.getElementById('tbodyEleves');
     if (!eleves || eleves.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Aucun élève inscrit.</td></tr>'; return; }
-    tbody.innerHTML = eleves.map(e => `<tr><td><strong>${e.utp_id}</strong></td><td>${e.nom} ${e.prenom}</td><td>${e.centre_nom}</td><td>${e.matiere} (${e.niveau})</td><td>${e.montant_paye.toLocaleString()} Ar</td><td><button class="btn btn-danger" onclick="supprimerEleve(${e.id}, '${e.nom}')">🗑️ Supprimer</button></td></tr>`).join('');
+    tbody.innerHTML = eleves.map(e => `
+      <tr>
+        <td><strong>${e.utp_id}</strong></td>
+        <td>${e.nom} ${e.prenom}</td>
+        <td>${e.centre_nom}</td>
+        <td>${e.matiere} (${e.niveau})</td>
+        <td>${e.montant_paye.toLocaleString()} Ar</td>
+        <td>
+          <button class="btn" style="background:#FF9800; color:white; margin-right:5px;" onclick="ouvrirModification(${e.id})">✏️ Modifier</button>
+          <button class="btn btn-danger" onclick="supprimerEleve(${e.id}, '${e.nom}')">🗑️ Supprimer</button>
+        </td>
+      </tr>`).join('');
   } catch(e) { console.error(e); }
 }
 async function supprimerEleve(id, nom) {
@@ -207,6 +248,54 @@ async function supprimerEleve(id, nom) {
     await chargerTransactions();
   } catch(e) { alert(e.message); }
 }
+
+// --- MODIFICATION D'UN ÉLÈVE ---
+async function ouvrirModification(id) {
+  try {
+    const eleves = await apiFetch('/api/etudiants');
+    const e = eleves.find(x => x.id === id);
+    if (!e) return alert('Élève introuvable');
+    
+    document.getElementById('mod-id').value = e.id;
+    document.getElementById('mod-nom').value = e.nom;
+    document.getElementById('mod-prenom').value = e.prenom;
+    document.getElementById('mod-tel').value = e.telephone || '';
+    document.getElementById('mod-matiere').value = e.matiere;
+    document.getElementById('mod-niveau').value = e.niveau;
+    document.getElementById('mod-centre').value = e.centre_id;
+    document.getElementById('mod-montant').value = e.montant_paye;
+    document.getElementById('mod-date').value = e.date_entree;
+    
+    document.getElementById('modalModifier').style.display = 'flex';
+  } catch (e) { alert(e.message); }
+}
+
+function fermerModification() {
+  document.getElementById('modalModifier').style.display = 'none';
+}
+
+async function sauvegarderModification() {
+  const id = document.getElementById('mod-id').value;
+  const data = {
+    nom: document.getElementById('mod-nom').value,
+    prenom: document.getElementById('mod-prenom').value,
+    telephone: document.getElementById('mod-tel').value,
+    matiere: document.getElementById('mod-matiere').value,
+    niveau: document.getElementById('mod-niveau').value,
+    centre_id: parseInt(document.getElementById('mod-centre').value),
+    montant_paye: parseInt(document.getElementById('mod-montant').value),
+    date_entree: document.getElementById('mod-date').value
+  };
+  
+  try {
+    await apiFetch('/api/admin/etudiants/' + id, 'PUT', data);
+    alert('✅ Élève modifié avec succès !');
+    fermerModification();
+    await chargerEleves();
+  } catch (e) { alert(e.message); }
+}
+
+// --- GESTION DES TRANSACTIONS ---
 async function chargerTransactions() {
   try {
     const transactions = await apiFetch('/api/admin/transactions');
@@ -239,8 +328,7 @@ async function lancerArchivage() {
 
 // --- NETTOYAGE DÉFINITIF ---
 async function nettoyerArchives() {
-  if (!confirm("⚠️ ATTENTION ⚠️\n\nCette action va SUPPRIMER DÉFINITIVEMENT de la base de données tous les élèves archivés (ceux ayant dépassé les 80/110 jours) ainsi que toutes leurs transactions.\n\nCette action est irréversible. Voulez-vous continuer ?")) return;
-  
+  if (!confirm("⚠️ ATTENTION ⚠️\n\nCette action va SUPPRIMER DÉFINITIVEMENT de la base de données tous les élèves archivés ainsi que toutes leurs transactions.\n\nCette action est irréversible. Voulez-vous continuer ?")) return;
   try {
     const r = await apiFetch('/api/admin/nettoyer-archives', 'POST');
     document.getElementById('resultatNettoyage').innerHTML = `<span style="color:#2E7D32;">✅ ${r.message}</span>`;
