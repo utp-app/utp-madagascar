@@ -1,7 +1,7 @@
 let session = null;
 let centres = [];
 let matieres = {};
-let listeEleves = []; // Stocke les élèves pour le formulaire de notes
+let listeEleves = [];
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -130,7 +130,7 @@ function majNiveaux() {
 async function chargerEtudiants() {
   try {
     const rows = await api('/api/etudiants');
-    listeEleves = rows; // On stocke les élèves ici !
+    listeEleves = rows;
     
     const tbody = $('#table-etudiants tbody');
     if (!tbody) return;
@@ -205,6 +205,11 @@ async function ajouterPaiement() {
   const tranche = $('#p-tranche').value;
   const mode_paiement = $('#p-mode').value;
   const reference = $('#p-reference').value;
+  
+  // On récupère le format choisi
+  const formatChoisi = document.getElementById('p-format').value;
+  const largeurTicket = formatChoisi === '58' ? '58mm' : '80mm';
+  const largeurPolice = formatChoisi === '58' ? '10px' : '12px';
 
   if (!etudiant_id || !montant) return alert('Champs manquants');
   if ((mode_paiement === 'Mobile Money' || mode_paiement === 'Chèque') && !reference) {
@@ -220,12 +225,20 @@ async function ajouterPaiement() {
     const dateNow = new Date().toLocaleString('fr-FR');
     const ticketHTML = `
       <html><head><style>
-        @media print { @page { size: 80mm auto; margin: 0; } body { width: 80mm; margin: 0; padding: 10px; } .no-print { display: none !important; } }
-        body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; line-height: 1.4; width: 300px; margin: 0 auto; background: #fff; padding: 15px; }
-        .text-center { text-align: center; } .logo { display: block; margin: 0 auto; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; }
-        .title { font-size: 16px; font-weight: bold; margin: 10px 0 2px 0; } .subtitle { font-size: 10px; margin-bottom: 10px; }
-        .divider { border-top: 1px dashed #000; margin: 10px 0; } .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .bold { font-weight: bold; } .total { font-size: 14px; font-weight: bold; margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
+        @media print { 
+          @page { size: ${largeurTicket} auto; margin: 0; } 
+          body { width: ${largeurTicket}; margin: 0; padding: 5px; } 
+          .no-print { display: none !important; } 
+        }
+        body { font-family: 'Courier New', Courier, monospace; font-size: ${largeurPolice}; color: #000; line-height: 1.4; width: ${largeurTicket}; margin: 0 auto; background: #fff; padding: 10px; }
+        .text-center { text-align: center; } 
+        .logo { display: block; margin: 0 auto; width: ${formatChoisi === '58' ? '50px' : '70px'}; height: ${formatChoisi === '58' ? '50px' : '70px'}; border-radius: 50%; object-fit: cover; }
+        .title { font-size: ${formatChoisi === '58' ? '14px' : '16px'}; font-weight: bold; margin: 10px 0 2px 0; } 
+        .subtitle { font-size: 9px; margin-bottom: 10px; }
+        .divider { border-top: 1px dashed #000; margin: 8px 0; } 
+        .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .bold { font-weight: bold; } 
+        .total { font-size: ${formatChoisi === '58' ? '12px' : '14px'}; font-weight: bold; margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
         .btn-print { display: block; width: 100%; padding: 12px; margin-top: 20px; background: #1A237E; color: white; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
       </style></head><body>
         <img src="/logo.png" class="logo">
@@ -233,7 +246,7 @@ async function ajouterPaiement() {
         <div class="text-center subtitle">Centre : ${eleve.centre_nom || 'Non défini'}</div>
         <div class="divider"></div>
         <div class="row"><span>Date :</span> <span>${dateNow}</span></div>
-        <div class="row"><span>Ticket N° :</span> <span>${r.ticket_ref}</span></div>
+        <div class="row"><span>Ticket :</span> <span>${r.ticket_ref}</span></div>
         <div class="row"><span>Mode :</span> <span>${mode_paiement}</span></div>
         ${reference ? `<div class="row"><span>Réf :</span> <span>${reference}</span></div>` : ''}
         <div class="divider"></div>
@@ -241,12 +254,12 @@ async function ajouterPaiement() {
         <div class="row"><span>ID :</span> <span>${eleve.utp_id}</span></div>
         <div class="row"><span>Formation :</span> <span>${eleve.matiere} (${eleve.niveau})</span></div>
         <div class="divider"></div>
-        <div class="row"><span>Montant versé ce jour :</span> <span>${r.montant.toLocaleString()} Ar</span></div>
+        <div class="row"><span>Montant versé :</span> <span>${r.montant.toLocaleString()} Ar</span></div>
         <div class="row"><span>Type :</span> <span>${tranche}</span></div>
-        <div class="row bold"><span>Total payé à ce jour :</span> <span>${r.nouveauMontant.toLocaleString()} Ar</span></div>
+        <div class="row bold"><span>Total payé :</span> <span>${r.nouveauMontant.toLocaleString()} Ar</span></div>
         <div class="total">MERCI DE VOTRE CONFIANCE</div>
-        <div class="text-center" style="font-size: 9px; margin-top: 15px;">Ce ticket est généré automatiquement.</div>
-        <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+        <div class="text-center" style="font-size: 9px; margin-top: 10px;">Généré automatiquement.</div>
+        <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimer</button>
       </body></html>
     `;
     const win = window.open('', '_blank');
@@ -266,10 +279,9 @@ function chargerBareme() {
   const id = parseInt($('#n-etudiant').value);
   if (!id) { $('#n-bareme').innerHTML = ''; return; }
   
-  // On cherche l'élève dans la liste stockée
   const eleve = listeEleves.find(e => e.id === id);
   if (!eleve) { 
-    $('#n-bareme').innerHTML = '<p style="color:red; text-align:center;">Erreur : Élève non trouvé. Actualisez la page.</p>';
+    $('#n-bareme').innerHTML = '<p style="color:red; text-align:center;">Erreur : Élève non trouvé.</p>';
     return; 
   }
   
@@ -384,7 +396,6 @@ async function enregistrerNote() {
     let mentionColor = r.passe_niveau ? '#2E7D32' : '#C62828';
     let mentionText = r.passe_niveau ? '✅ Admis au niveau supérieur' : '⚠️ Repêchage nécessaire';
     
-    // On génère le résultat avec le bouton PDF
     $('#note-result').innerHTML = `
       <div class="card" style="background:#E3F2FD; border:1px solid #BBDEFB;">
         <h3 style="color:#1A237E;">Résultat de l'examen</h3>
@@ -403,7 +414,6 @@ async function enregistrerNote() {
   } catch (e) { alert(e.message); }
 }
 
-// --- GÉNÉRATION DU PDF ---
 function telechargerResultatPDF(etudiant_id, criteresStr, total, appreciation) {
   const eleve = listeEleves.find(e => e.id === etudiant_id);
   if (!eleve) return alert('Élève introuvable.');
