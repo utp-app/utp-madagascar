@@ -28,9 +28,10 @@ function calculDateExamen(dateEntree, matiere) {
   return d.toISOString().slice(0, 10);
 }
 
+// MISE À JOUR : 80 jours (Anglais/Français) et 110 jours (Allemand/Chinois)
 function estExpire(dateEntree, matiere) {
   if (!dateEntree) return false;
-  const dureeJours = (matiere === 'Anglais' || matiere === 'Français') ? 70 : 100;
+  const dureeJours = (matiere === 'Anglais' || matiere === 'Français') ? 80 : 110;
   const dateEntreeObj = new Date(dateEntree);
   const dateLimite = new Date(dateEntreeObj.getTime() + (dureeJours * 24 * 60 * 60 * 1000));
   return new Date() > dateLimite;
@@ -173,7 +174,7 @@ app.post('/api/notes', authRole, (req, res) => {
 });
 
 /* ============================================================
-   PLANNING EXAMENS (DIRECTION)
+   PLANNING EXAMENS
    ============================================================ */
 
 app.post('/api/direction/examens/:id/approuver', authRole, (req, res) => {
