@@ -1,7 +1,7 @@
 let session = null;
 let centres = [];
 let matieres = {};
-let listeEleves = []; // NOUVEAU : Pour stocker les élèves et connaître leur matière/niveau
+let listeEleves = []; // Stocke les élèves pour le formulaire de notes
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -130,7 +130,7 @@ function majNiveaux() {
 async function chargerEtudiants() {
   try {
     const rows = await api('/api/etudiants');
-    listeEleves = rows; // On stocke la liste des élèves pour le formulaire de notes
+    listeEleves = rows; // On stocke les élèves ici !
     
     const tbody = $('#table-etudiants tbody');
     if (!tbody) return;
@@ -266,14 +266,16 @@ function chargerBareme() {
   const id = parseInt($('#n-etudiant').value);
   if (!id) { $('#n-bareme').innerHTML = ''; return; }
   
-  // On cherche les infos de l'élève dans la liste stockée
+  // On cherche l'élève dans la liste stockée
   const eleve = listeEleves.find(e => e.id === id);
-  if (!eleve) return;
+  if (!eleve) { 
+    $('#n-bareme').innerHTML = '<p style="color:red; text-align:center;">Erreur : Élève non trouvé. Actualisez la page.</p>';
+    return; 
+  }
   
   const matiere = eleve.matiere;
   const niveau = eleve.niveau;
   
-  // Définition des barèmes
   let bareme = [];
   
   if (matiere === 'Allemand' && (niveau === 'A1' || niveau === 'A2')) {
@@ -323,16 +325,15 @@ function chargerBareme() {
     ];
   }
 
-  // Génération du tableau
-  let html = `<table style="width:100%; margin-top:10px; border-collapse: collapse;">
-    <thead><tr><th style="background:#1e3a5f; color:white; padding:10px;">Épreuve / Critère</th><th style="background:#1e3a5f; color:white; padding:10px;">Barème</th><th style="background:#1e3a5f; color:white; padding:10px;">Note</th></tr></thead><tbody>`;
+  let html = `<table style="width:100%; margin-top:10px; border-collapse: collapse; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <thead><tr><th style="background:#1e3a5f; color:white; padding:12px; text-align:left;">Épreuve / Critère</th><th style="background:#1e3a5f; color:white; padding:12px; text-align:center;">Barème</th><th style="background:#1e3a5f; color:white; padding:12px; text-align:center;">Note</th></tr></thead><tbody>`;
   
   bareme.forEach((b) => {
     html += `
       <tr>
-        <td style="padding:10px; border-bottom:1px solid #eee;">${b.nom}</td>
-        <td style="padding:10px; border-bottom:1px solid #eee;">${b.max} pts</td>
-        <td style="padding:10px; border-bottom:1px solid #eee;"><input type="number" class="note-input" data-max="${b.max}" max="${b.max}" min="0" placeholder="0" oninput="calculerTotalNote()" style="width:80px; padding:5px; border:1px solid #ccc; border-radius:4px;" /></td>
+        <td style="padding:12px; border-bottom:1px solid #eee;">${b.nom}</td>
+        <td style="padding:12px; border-bottom:1px solid #eee; text-align:center;">${b.max} pts</td>
+        <td style="padding:12px; border-bottom:1px solid #eee; text-align:center;"><input type="number" class="note-input" data-max="${b.max}" max="${b.max}" min="0" placeholder="0" oninput="calculerTotalNote()" style="width:80px; padding:8px; border:1px solid #ccc; border-radius:4px; text-align:center;" /></td>
       </tr>
     `;
   });
@@ -365,11 +366,14 @@ async function enregistrerNote() {
   
   let total = 0;
   let detail = {};
+  let criteresDetail = [];
   
   inputs.forEach((input, index) => {
     const val = parseInt(input.value) || 0;
     total += val;
     detail['critere_' + index] = val;
+    const nomCritere = input.closest('tr').querySelector('td').textContent;
+    criteresDetail.push({ nom: nomCritere, note: val, max: input.dataset.max });
   });
 
   if (total === 0) return alert('Veuillez saisir au moins une note.');
@@ -380,17 +384,112 @@ async function enregistrerNote() {
     let mentionColor = r.passe_niveau ? '#2E7D32' : '#C62828';
     let mentionText = r.passe_niveau ? '✅ Admis au niveau supérieur' : '⚠️ Repêchage nécessaire';
     
+    // On génère le résultat avec le bouton PDF
     $('#note-result').innerHTML = `
       <div class="card" style="background:#E3F2FD; border:1px solid #BBDEFB;">
         <h3 style="color:#1A237E;">Résultat de l'examen</h3>
         <p style="font-size:16px;"><strong>Total :</strong> ${r.total} / 100</p>
         <p style="font-size:16px;"><strong>Mention :</strong> ${r.appreciation}</p>
         <p style="font-size:16px; color:${mentionColor}; font-weight:bold;">${mentionText}</p>
+        
+        <button onclick="telechargerResultatPDF(${etudiant_id}, '${criteresDetail.map(c => c.nom + '|' + c.note + '|' + c.max).join(';')}', ${r.total}, '${r.appreciation}')" 
+          style="margin-top:20px; padding:12px 20px; background:#2E7D32; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; width:100%;">
+          📄 Voir / Télécharger le résultat (PDF)
+        </button>
       </div>`;
       
     await chargerEtudiants();
     $('#n-bareme').innerHTML = '';
   } catch (e) { alert(e.message); }
+}
+
+// --- GÉNÉRATION DU PDF ---
+function telechargerResultatPDF(etudiant_id, criteresStr, total, appreciation) {
+  const eleve = listeEleves.find(e => e.id === etudiant_id);
+  if (!eleve) return alert('Élève introuvable.');
+  
+  const criteres = criteresStr.split(';').map(c => {
+    const parts = c.split('|');
+    return { nom: parts[0], note: parts[1], max: parts[2] };
+  });
+  
+  const dateNow = new Date().toLocaleString('fr-FR');
+  
+  let lignesTableau = '';
+  criteres.forEach(c => {
+    lignesTableau += `
+      <tr>
+        <td style="padding:10px; border-bottom:1px solid #ddd;">${c.nom}</td>
+        <td style="padding:10px; border-bottom:1px solid #ddd; text-align:center;">${c.max}</td>
+        <td style="padding:10px; border-bottom:1px solid #ddd; text-align:center; font-weight:bold;">${c.note}</td>
+      </tr>
+    `;
+  });
+
+  const html = `
+    <html>
+    <head>
+      <title>Résultat Examen - ${eleve.nom}</title>
+      <style>
+        @media print { @page { size: A4; margin: 20mm; } body { padding: 0; } .no-print { display: none !important; } }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; max-width: 800px; margin: 0 auto; color: #333; }
+        .header { text-align: center; border-bottom: 3px solid #1A237E; padding-bottom: 20px; margin-bottom: 30px; }
+        .header img { width: 80px; height: 80px; border-radius: 50%; }
+        .header h1 { color: #1A237E; margin: 10px 0; font-size: 24px; }
+        .header p { color: #666; margin: 0; font-size: 14px; }
+        .info-eleve { background: #f4f6f8; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid #1A237E; }
+        .info-eleve p { margin: 5px 0; font-size: 15px; }
+        .info-eleve strong { color: #1A237E; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th { background: #1A237E; color: white; padding: 12px; text-align: left; }
+        .total-box { background: #E8F5E9; border: 2px solid #2E7D32; padding: 20px; border-radius: 8px; text-align: center; margin-top: 20px; }
+        .total-box h2 { color: #2E7D32; margin: 0; font-size: 28px; }
+        .total-box p { color: #2E7D32; font-weight: bold; font-size: 18px; margin-top: 10px; }
+        .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+        .btn-print { display: block; width: 100%; padding: 15px; margin-top: 30px; background: #2E7D32; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <img src="/logo.png" alt="Logo UTP">
+        <h1>UTP MADAGASCAR</h1>
+        <p>Fiche de Résultat d'Examen</p>
+      </div>
+      
+      <div class="info-eleve">
+        <p><strong>Élève :</strong> ${eleve.nom} ${eleve.prenom}</p>
+        <p><strong>ID :</strong> ${eleve.utp_id}</p>
+        <p><strong>Centre :</strong> ${eleve.centre_nom}</p>
+        <p><strong>Matière :</strong> ${eleve.matiere} (${eleve.niveau})</p>
+        <p><strong>Date :</strong> ${dateNow}</p>
+      </div>
+      
+      <table>
+        <thead>
+          <tr><th>Épreuve / Critère</th><th style="text-align:center;">Barème</th><th style="text-align:center;">Note obtenue</th></tr>
+        </thead>
+        <tbody>
+          ${lignesTableau}
+        </tbody>
+      </table>
+      
+      <div class="total-box">
+        <h2>TOTAL : ${total} / 100</h2>
+        <p>MENTION : ${appreciation}</p>
+      </div>
+      
+      <div class="footer">
+        <p>Ce document est généré automatiquement par l'application UTP Madagascar.</p>
+      </div>
+      
+      <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    </body>
+    </html>
+  `;
+  
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 // --- LIVRES ---
