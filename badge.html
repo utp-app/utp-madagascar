@@ -29,9 +29,6 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
 .alerte-ok { background:#E8F5E9; color:#2E7D32; border:1px solid #A5D6A7; }
 .alerte-ko { background:#FFEBEE; color:#C62828; border:1px solid #EF9A9A; }
 
-/* =========================================
-   BADGE CLASSIQUE (Format Portrait)
-   ========================================= */
 #badgeClassique { 
   width: 300px; height: 420px; 
   background-image: url('fond_badge_classique.jpg');
@@ -57,9 +54,6 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
 
 .bc-id-box { position:absolute; top: 89%; left: 50%; transform:translateX(-50%); background: #fff; color: #1A237E; padding: 4px 15px; border-radius: 20px; font-size:12px; font-weight:900; font-family:monospace; border: 2px solid #C62828; }
 
-/* =========================================
-   BADGE INTELLO (Format Paysage)
-   ========================================= */
 #badgeIntello { 
   width: 420px; height: 300px; 
   background-image: url('fond_badge_intello.jpg');
@@ -144,32 +138,24 @@ body { background: #1A237E; min-height:100vh; display:flex; justify-content:cent
   <button class="btn-photo" onclick="document.getElementById('fileInput').click()">📁 Choisir une image</button>
 
   <button class="btn btn-primary" id="btnGenerer" onclick="genererBadge()" disabled>🎫 Générer le Badge</button>
-  
-  <!-- BOUTON RETOUR MODIFIÉ POUR ALLER SUR L'ONGLET ÉTUDIANTS -->
   <button class="btn btn-secondary" onclick="window.location.href='/?tab=etudiants'">⬅️ Retour à l'inscription</button>
 
   <div id="previewContainer" class="preview-container">
     <h3 style="color:#1A237E; margin-bottom:15px;">Aperçu du Badge</h3>
     
-    <!-- BADGE CLASSIQUE -->
     <div id="badgeClassique" class="hidden">
       <div class="bc-centre-name" id="previewCentreC">CENTRE UTP</div>
-      
       <div class="bc-photo-box">
         <img id="previewPhotoC" src="">
         <div class="bc-photo-fallback" id="fallbackPhotoC"></div>
       </div>
-
       <div class="bc-nom-box"><div class="text" id="previewNomC">NOM</div></div>
       <div class="bc-prenom-box"><div class="text" id="previewPrenomC">PRENOM</div></div>
-      
       <div class="bc-niveau-box" id="previewNiveauC">NIVEAU</div>
-      
       <div class="bc-qr-wrapper"><div id="qr-code-container-classique"></div></div>
       <div class="bc-id-box">ID <span id="previewIdC">—</span></div>
     </div>
 
-    <!-- BADGE INTELLO -->
     <div id="badgeIntello" class="hidden">
       <div class="bi-photo-box">
         <img id="previewPhotoI" src="">
@@ -190,7 +176,6 @@ var qrCodeInstanceC = null;
 var qrCodeInstanceI = null;
 var badgeType = null;
 
-// Montant total (pour le calcul du reste à payer)
 const MONTANT_TOTAL = 50000; 
 
 const API_BASE = '';
@@ -206,7 +191,6 @@ async function apiFetch(path) {
   return r.json();
 }
 
-// Calcul de la date d'expiration (Date d'examen + 15 jours)
 function calculerDateExpiration(dateEntree, matiere) {
   const d = new Date(dateEntree);
   if (matiere === 'Anglais' || matiere === 'Français') {
@@ -244,6 +228,10 @@ async function chercherEleve() {
     document.getElementById('centreBadge').value = found.centre_nom;
     document.getElementById('niveauBadge').value = found.niveau;
     document.getElementById('idBadge').value = found.utp_id;
+    
+    // CONTACT DU RESPONSABLE
+    document.getElementById('contactBadge').value = found.responsable_tel || '034 60 761 00';
+
     document.getElementById('dateExpiration').value = calculerDateExpiration(found.date_entree, found.matiere);
 
     status.textContent = "✅ Élève trouvé : " + found.nom;
