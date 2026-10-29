@@ -1,35 +1,326 @@
-      <!-- Onglet Paiements -->
-      <div id="tab-paiements" class="tab">
-        <h2>Enregistrer un paiement</h2>
-        <div class="card">
-          <select id="p-etudiant" style="width:100%; margin-bottom:10px;"></select>
-          
-          <!-- NOUVEAU CHAMP : Montant Total de la Formation -->
-          <label style="font-size:12px; font-weight:bold; color:#333;">Montant total de la formation (Ar)</label>
-          <input id="p-total" type="number" value="50000" placeholder="Montant total" style="width:100%; margin-bottom:10px;" oninput="calculerReste()" />
-          
-          <!-- CHAMP MODIFIÉ : Montant versé maintenant -->
-          <label style="font-size:12px; font-weight:bold; color:#333;">Montant versé maintenant (Ar)</label>
-          <input id="p-montant" type="number" placeholder="Montant versé" style="width:100%; margin-bottom:10px;" oninput="calculerReste()" />
-          
-          <!-- NOUVEAU CHAMP : Reste à payer (lecture seule) -->
-          <label style="font-size:12px; font-weight:bold; color:#333;">Reste à payer (Ar)</label>
-          <input id="p-reste" type="text" readonly placeholder="Reste à payer" style="width:100%; margin-bottom:10px; background:#eee; font-weight:bold; color:#C62828;" />
+let session = null;
+let centres = [];
+let matieres = {};
 
-          <select id="p-tranche" style="width:100%; margin-bottom:10px;">
-            <option value="total">Total</option>
-            <option value="tranche1">Tranche 1</option>
-            <option value="tranche2">Tranche 2</option>
-          </select>
-          <select id="p-mode" style="width:100%; margin-bottom:10px;" onchange="toggleReference()">
-            <option value="Espèce">Espèce</option>
-            <option value="Mobile Money">Mobile Money</option>
-            <option value="Virement">Virement</option>
-            <option value="Chèque">Chèque</option>
-          </select>
-          <input id="p-reference" type="text" placeholder="Référence (N° transaction)" style="width:100%; margin-bottom:10px; display:none;" />
-          
-          <button onclick="ajouterPaiement()">Enregistrer et générer le ticket</button>
-        </div>
-        <div id="ticket-result"></div>
-      </div>
+const $ = (sel) => document.querySelector(sel);
+
+async function api(path, method = 'GET', body = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (session) headers['x-code-acces'] = session.utilisateur.code_acces;
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: 'Erreur inconnue' }));
+    throw new Error(err.error || 'Erreur');
+  }
+  return r.json();
+}
+
+// --- CALCUL DU RESTE À PAYER ---
+function calculerReste() {
+  const total = parseInt(document.getElementById('p-total').value) || 0;
+  const verse = parseInt(document.getElementById('p-montant').value) || 0;
+  const reste = total - verse;
+  
+  const champReste = document.getElementById('p-reste');
+  if (total > 0) {
+    champReste.value = reste.toLocaleString() + ' Ar';
+  } else {
+    champReste.value = '';
+  }
+}
+
+async function login() {
+  const code = $('#code-input').value.trim();
+  $('#code-input').value = '';
+  if (!code) return;
+  try {
+    const data = await api('/api/login', 'POST', { code });
+    session = data;
+    sessionStorage.setItem('utp_session_data', JSON.stringify(data));
+    afficherInterface();
+  } catch (e) { 
+    $('#login-error').textContent = e.message; 
+  }
+}
+
+async function afficherInterface() {
+  $('#login-screen').classList.remove('active');
+  $('#main-screen').classList.add('active');
+  $('#user-info').textContent = `${session.utilisateur.nom} (${session.utilisateur.role})`;
+  
+  if (session.utilisateur.role === 'admin') {
+    $('#interface-admin-direction').style.display = 'block';
+    $('#interface-responsable').style.display = 'none';
+    $('#btn-admin').style.display = 'inline-block';
+    $('#btn-direction').style.display = 'none'; 
+  } 
+  else if (session.utilisateur.role === 'direction') {
+    $('#interface-admin-direction').style.display = 'block';
+    $('#interface-responsable').style.display = 'none';
+    $('#btn-admin').style.display = 'none';
+    $('#btn-direction').style.display = 'inline-block'; 
+  } 
+  else {
+    $('#interface-responsable').style.display = 'block';
+    $('#interface-admin-direction').style.display = 'none';
+    $('#btn-admin').style.display = 'none';
+    $('#btn-direction').style.display = 'none';
+    if (centres.length === 0) await init(); 
+    showTab('etudiants');
+  }
+}
+
+window.onload = async function() {
+  const savedData = sessionStorage.getItem('utp_session_data');
+  if (savedData) {
+    session = JSON.parse(savedData);
+    await afficherInterface();
+  }
+};
+
+function logout() { 
+  session = null; 
+  sessionStorage.clear(); 
+  localStorage.clear(); 
+  document.getElementById('user-info').textContent = '';
+  document.getElementById('main-screen').classList.remove('active');
+  document.getElementById('interface-responsable').style.display = 'none';
+  document.getElementById('interface-admin-direction').style.display = 'none';
+  document.getElementById('code-input').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('login-screen').classList.add('active');
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const target = document.getElementById('tab-' + name);
+  if (target) target.classList.add('active');
+}
+
+async function init() {
+  try {
+    centres = await api('/api/centres');
+    matieres = await api('/api/matieres');
+
+    const fillCentres = (id) => {
+      const sel = $(id);
+      if(!sel) return;
+      sel.innerHTML = centres.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+    };
+    fillCentres('#e-centre');
+
+    const matSel = $('#e-matiere');
+    if (matSel) {
+      matSel.innerHTML = Object.keys(matieres).map(m => `<option>${m}</option>`).join('');
+      matSel.onchange = () => majNiveaux();
+      majNiveaux();
+    }
+    await chargerEtudiants();
+  } catch (e) { console.error("Erreur d'initialisation :", e); }
+}
+
+function majNiveaux() {
+  const mat = $('#e-matiere').value;
+  $('#e-niveau').innerHTML = (matieres[mat] || []).map(n => `<option>${n}</option>`).join('');
+}
+
+async function chargerEtudiants() {
+  try {
+    const rows = await api('/api/etudiants');
+    const tbody = $('#table-etudiants tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = rows.map(e => {
+      let statutExamenIcon = e.statut_examen === 'approuve' ? '✅' : (e.statut_examen === 'modifie' ? '⚠️' : '⏳');
+      let statutExamenColor = e.statut_examen === 'approuve' ? '#2E7D32' : (e.statut_examen === 'modifie' ? '#E65100' : '#666');
+
+      return `
+      <tr>
+        <td>${e.utp_id}</td>
+        <td>${e.nom} ${e.prenom}</td>
+        <td>${e.matiere}</td>
+        <td>${e.niveau}</td>
+        <td>${e.centre_nom}</td>
+        <td>${e.montant_paye.toLocaleString()} Ar</td>
+        <td>${e.badge_genere ? '✅' : '❌'}</td>
+        <td>
+          <div>Entrée : ${e.date_entree}</div>
+          <div style="font-size:11px; margin-top:3px; font-weight:bold; color:${statutExamenColor};">
+            Examen : ${e.date_examen_affichee} ${statutExamenIcon}
+          </div>
+        </td>
+      </tr>
+    `}).join('');
+
+    const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom} (${e.matiere} ${e.niveau})</option>`).join('');
+    if ($('#p-etudiant')) $('#p-etudiant').innerHTML = opts;
+    if ($('#n-etudiant')) $('#n-etudiant').innerHTML = opts;
+    chargerBareme();
+  } catch (e) { console.error(e); }
+}
+
+async function ajouterEtudiant() {
+  // Vérification des champs vides
+  const nom = $('#e-nom').value.trim();
+  const prenom = $('#e-prenom').value.trim();
+  const tel = $('#e-tel').value.trim();
+  const matiere = $('#e-matiere').value;
+  const niveau = $('#e-niveau').value;
+  const centre = $('#e-centre').value;
+  const date = $('#e-date').value;
+
+  if (!nom || !prenom || !tel || !matiere || !niveau || !centre || !date) {
+    return alert('⚠️ Veuillez remplir tous les champs obligatoires (Nom, Prénom, Contact, Matière, Niveau, Centre, Date).');
+  }
+
+  try {
+    await api('/api/etudiants', 'POST', {
+      nom: nom,
+      prenom: prenom,
+      telephone: tel,
+      matiere: matiere,
+      niveau: niveau,
+      centre_id: parseInt(centre),
+      date_entree: date
+    });
+    alert("✅ Étudiant ajouté !");
+    
+    // Vider les champs
+    $('#e-nom').value = ''; 
+    $('#e-prenom').value = ''; 
+    $('#e-tel').value = '';
+    $('#e-date').value = '';
+    
+    await chargerEtudiants();
+  } catch (e) { alert(e.message); }
+}
+
+function toggleReference() {
+  var mode = document.getElementById('p-mode').value;
+  var refInput = document.getElementById('p-reference');
+  if (mode === 'Mobile Money' || mode === 'Chèque') {
+    refInput.style.display = 'block';
+    refInput.required = true;
+  } else {
+    refInput.style.display = 'none';
+    refInput.required = false;
+    refInput.value = '';
+  }
+}
+
+async function ajouterPaiement() {
+  const etudiant_id = parseInt($('#p-etudiant').value);
+  const montant = parseInt($('#p-montant').value);
+  const tranche = $('#p-tranche').value;
+  const mode_paiement = $('#p-mode').value;
+  const reference = $('#p-reference').value;
+
+  if (!etudiant_id || !montant) return alert('Champs manquants');
+  if ((mode_paiement === 'Mobile Money' || mode_paiement === 'Chèque') && !reference) {
+    return alert('⚠️ Veuillez saisir la référence (N° transaction).');
+  }
+
+  try {
+    const rows = await api('/api/etudiants');
+    const eleve = rows.find(e => e.id === etudiant_id);
+
+    const r = await api('/api/paiements', 'POST', { etudiant_id, montant, tranche, mode_paiement, reference });
+    
+    const dateNow = new Date().toLocaleString('fr-FR');
+    const ticketHTML = `
+      <html><head><style>
+        @media print { @page { size: 80mm auto; margin: 0; } body { width: 80mm; margin: 0; padding: 10px; } .no-print { display: none !important; } }
+        body { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #000; line-height: 1.4; width: 300px; margin: 0 auto; background: #fff; padding: 15px; }
+        .text-center { text-align: center; } .logo { display: block; margin: 0 auto; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; }
+        .title { font-size: 16px; font-weight: bold; margin: 10px 0 2px 0; } .subtitle { font-size: 10px; margin-bottom: 10px; }
+        .divider { border-top: 1px dashed #000; margin: 10px 0; } .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .bold { font-weight: bold; } .total { font-size: 14px; font-weight: bold; margin-top: 10px; text-align: center; border: 1px solid #000; padding: 5px; }
+        .btn-print { display: block; width: 100%; padding: 12px; margin-top: 20px; background: #1A237E; color: white; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
+      </style></head><body>
+        <img src="/logo.png" class="logo">
+        <div class="text-center title">UTP MADAGASCAR</div>
+        <div class="text-center subtitle">Centre : ${eleve.centre_nom || 'Non défini'}</div>
+        <div class="divider"></div>
+        <div class="row"><span>Date :</span> <span>${dateNow}</span></div>
+        <div class="row"><span>Ticket N° :</span> <span>${r.ticket_ref}</span></div>
+        <div class="row"><span>Mode :</span> <span>${mode_paiement}</span></div>
+        ${reference ? `<div class="row"><span>Réf :</span> <span>${reference}</span></div>` : ''}
+        <div class="divider"></div>
+        <div class="row bold"><span>Élève :</span> <span>${eleve.nom} ${eleve.prenom}</span></div>
+        <div class="row"><span>ID :</span> <span>${eleve.utp_id}</span></div>
+        <div class="row"><span>Formation :</span> <span>${eleve.matiere} (${eleve.niveau})</span></div>
+        <div class="divider"></div>
+        <div class="row"><span>Montant versé ce jour :</span> <span>${r.montant.toLocaleString()} Ar</span></div>
+        <div class="row"><span>Type :</span> <span>${tranche}</span></div>
+        <div class="row bold"><span>Total payé à ce jour :</span> <span>${r.nouveauMontant.toLocaleString()} Ar</span></div>
+        <div class="total">MERCI DE VOTRE CONFIANCE</div>
+        <div class="text-center" style="font-size: 9px; margin-top: 15px;">Ce ticket est généré automatiquement.</div>
+        <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+      </body></html>
+    `;
+    const win = window.open('', '_blank');
+    win.document.write(ticketHTML);
+    win.document.close();
+
+    $('#ticket-result').innerHTML = `<div class="card" style="background:#E8F5E9; border:1px solid #C8E6C9; color:#2E7D32;"><h3>✅ Paiement enregistré avec succès !</h3><p>Le ticket a été ouvert dans un nouvel onglet pour impression.</p></div>`;
+    
+    await chargerEtudiants(); 
+    $('#p-montant').value = ''; $('#p-reference').value = '';
+    calculerReste();
+  } catch (e) { alert(e.message); }
+}
+
+// --- NOTES ---
+function chargerBareme() {
+  const id = parseInt($('#n-etudiant').value);
+  if (!id) { $('#n-bareme').innerHTML = ''; return; }
+  $('#n-bareme').innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="number" class="note-input" placeholder="Listening / Lesen (Max 25)" max="25" />
+      <input type="number" class="note-input" placeholder="Reading / Hören (Max 25)" max="25" />
+      <input type="number" class="note-input" placeholder="Writing / Schreiben (Max 25)" max="25" />
+      <input type="number" class="note-input" placeholder="Speaking / Sprechen (Max 25)" max="25" />
+    </div>
+  `;
+}
+
+async function enregistrerNote() {
+  const etudiant_id = parseInt($('#n-etudiant').value);
+  const type_examen = $('#n-type').value;
+  const inputs = document.querySelectorAll('.note-input');
+  let total = 0;
+  let detail = {};
+  inputs.forEach((input, index) => {
+    const val = parseInt(input.value) || 0;
+    total += val;
+    detail['critere' + index] = val;
+  });
+
+  try {
+    const r = await api('/api/notes', 'POST', { etudiant_id, detail, total, type_examen });
+    $('#note-result').innerHTML = `<div class="card" style="background:#E3F2FD; border:1px solid #BBDEFB;"><h3>Résultat : ${r.total}/100</h3><p>Mention : ${r.appreciation}</p></div>`;
+  } catch (e) { alert(e.message); }
+}
+
+// --- LIVRES ---
+document.addEventListener('input', function(e) {
+  if (e.target.id === 'l-nombre') {
+    const total = e.target.value * 20000;
+    document.getElementById('l-total').value = total > 0 ? total.toLocaleString() + ' Ar' : '';
+  }
+});
+
+async function commanderLivres() {
+  const nombre = parseInt($('#l-nombre').value);
+  const centre_id = parseInt($('#e-centre').value);
+  if (!nombre || nombre <= 0) return alert('Veuillez saisir un nombre valide.');
+  
+  try {
+    const r = await api('/api/livres/commander', 'POST', { nombre_livres: nombre, centre_id });
+    alert(`✅ Commande envoyée à la Direction !\nMontant : ${r.montant_total.toLocaleString()} Ar\n\nCet argent a été déduit de votre caisse.`);
+    $('#l-nombre').value = '';
+    $('#l-total').value = '';
+  } catch (e) { alert(e.message); }
+}
