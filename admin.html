@@ -113,7 +113,16 @@
         <strong>Leurs ID seront conservés pour une future réinscription.</strong>
       </p>
       <button onclick="lancerArchivage()" style="padding:15px 30px; background:#C62828; color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;">⚠️ Lancer la remise à zéro</button>
+      
+      <br><br>
+      <hr style="border:1px solid #eee; margin:20px 0;">
+      
+      <h3>🗑️ Nettoyage définitif</h3>
+      <p style="font-size:13px; color:#666; margin-bottom:15px;">Si vous voulez libérer de l'espace, vous pouvez supprimer définitivement les élèves déjà archivés ainsi que toutes leurs transactions.</p>
+      <button onclick="nettoyerArchives()" style="padding:15px 30px; background:#333; color:white; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer;">🗑️ Supprimer définitivement les archives</button>
+
       <div id="resultatArchive" style="margin-top:15px; font-weight:bold;"></div>
+      <div id="resultatNettoyage" style="margin-top:15px; font-weight:bold;"></div>
     </div>
   </div>
 
@@ -225,6 +234,19 @@ async function lancerArchivage() {
     await chargerEleves();
   } catch (e) {
     document.getElementById('resultatArchive').innerHTML = `<span style="color:#C62828;">❌ Erreur : ${e.message}</span>`;
+  }
+}
+
+// --- NETTOYAGE DÉFINITIF ---
+async function nettoyerArchives() {
+  if (!confirm("⚠️ ATTENTION ⚠️\n\nCette action va SUPPRIMER DÉFINITIVEMENT de la base de données tous les élèves archivés (ceux ayant dépassé les 80/110 jours) ainsi que toutes leurs transactions.\n\nCette action est irréversible. Voulez-vous continuer ?")) return;
+  
+  try {
+    const r = await apiFetch('/api/admin/nettoyer-archives', 'POST');
+    document.getElementById('resultatNettoyage').innerHTML = `<span style="color:#2E7D32;">✅ ${r.message}</span>`;
+    await chargerEleves();
+  } catch (e) {
+    document.getElementById('resultatNettoyage').innerHTML = `<span style="color:#C62828;">❌ Erreur : ${e.message}</span>`;
   }
 }
 </script>
