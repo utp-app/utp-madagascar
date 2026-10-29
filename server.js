@@ -146,46 +146,51 @@ app.post('/api/paiements', authRole, (req, res) => {
 // --- COMMANDE DE LIVRES DÉTAILLÉE ---
 app.post('/api/livres/commander', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
-  
   const { detail_livres, centre_id } = req.body; 
-  // detail_livres = [{ matiere: 'Anglais', niveau: 'L1', nombre: 10 }, ...]
-  
   let montant_total = 0;
   let total_livres = 0;
-
   detail_livres.forEach(item => {
     montant_total += item.nombre * 20000;
     total_livres += item.nombre;
   });
-
   if (total_livres === 0) return res.status(400).json({ error: 'Veuillez commander au moins un livre.' });
-
-  const info = db.prepare('INSERT INTO commandes_livres (centre_id, nombre_livres, montant_total, details) VALUES (?, ?, ?, ?)')
-    .run(centre_id, total_livres, montant_total, JSON.stringify(detail_livres));
-  
-  db.prepare('INSERT INTO depenses (centre_id, libelle, montant) VALUES (?, ?, ?)')
-    .run(centre_id, 'Achat de livres (Versement Direction)', montant_total);
-
+  const info = db.prepare('INSERT INTO commandes_livres (centre_id, nombre_livres, montant_total, details) VALUES (?, ?, ?, ?)').run(centre_id, total_livres, montant_total, JSON.stringify(detail_livres));
+  db.prepare('INSERT INTO depenses (centre_id, libelle, montant) VALUES (?, ?, ?)').run(centre_id, 'Achat de livres (Versement Direction)', montant_total);
   res.json({ id: info.lastInsertRowid, montant_total, total_livres });
 });
 
-// Route pour que la Direction voie le détail
 app.get('/api/direction/livres-details', authRole, (req, res) => {
   if (req.utilisateur.role !== 'direction') return res.status(403).json({ error: 'Direction requise' });
-  
-  const rows = db.prepare(`
-    SELECT cl.*, c.nom AS centre_nom 
-    FROM commandes_livres cl 
-    JOIN centres c ON c.id = cl.centre_id 
-    ORDER BY cl.id DESC
-  `).all();
-  
-  const result = rows.map(r => ({
-    ...r,
-    details: JSON.parse(r.details || '[]')
-  }));
-  
-  res.json(result);
+  const rows = db.prepare(`SELECT cl.*, c.nom AS centre_nom FROM commandes_livres cl JOIN centres c ON c.id = cl.centre_id ORDER BY cl.id DESC`).all();
+  res.json(rows.map(r => ({ ...r, details: JSON.parse(r.details || '[]') })));
+});
+
+// --- DÉPENSES (Responsable) ---
+app.post('/api/depenses', authRole, (req, res) => {
+  const u = req.utilisateur;
+  if (u.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
+  const { libelle, montant, centre_id } = req.body;
+  if (!libelle || !montant) return res.status(400).json({ error: 'Champs manquants' });
+  const info = db.prepare('INSERT INTO depenses (centre_id, libelle, montant) VALUES (?, ?, ?)').run(centre_id, libelle, montant);
+  res.json({ id: info.lastInsertRowid });
+});
+
+// --- STATISTIQUES POUR LE RESPONSABLE ---
+app.get('/api/responsable/stats', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
+  const u = req.utilisateur;
+  const centres = db.prepare(`SELECT c.* FROM centres c JOIN responsable_centres rc ON rc.centre_id = c.id WHERE rc.responsable_id = ?`).all(u.id);
+  let totalRecettes = 0;
+  let totalDepenses = 0;
+  const detailCentres = [];
+  centres.forEach(c => {
+    const recettes = db.prepare(`SELECT COALESCE(SUM(p.montant),0) as total FROM paiements p JOIN etudiants e ON e.id = p.etudiant_id WHERE e.centre_id = ?`).get(c.id).total;
+    const depenses = db.prepare('SELECT COALESCE(SUM(montant),0) as total FROM depenses WHERE centre_id = ?').get(c.id).total;
+    totalRecettes += recettes;
+    totalDepenses += depenses;
+    detailCentres.push({ id: c.id, nom: c.nom, recettes, depenses, solde: recettes - depenses });
+  });
+  res.json({ totalRecettes, totalDepenses, solde: totalRecettes - totalDepenses, detailCentres });
 });
 
 app.post('/api/notes', authRole, (req, res) => {
