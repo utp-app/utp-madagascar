@@ -119,7 +119,7 @@ async function init() {
       majNiveaux();
     }
     await chargerEtudiants();
-    genererTableauLivres(); // On génère le tableau des livres au démarrage
+    genererTableauLivres();
   } catch (e) { console.error("Erreur d'initialisation :", e); }
 }
 
@@ -549,7 +549,7 @@ async function commanderLivres() {
 
   inputs.forEach(input => {
     const nombre = parseInt(input.value) || 0;
-    if (nombre > 0) {
+    if (nombre > 0) { // ON IGNORE LES 0 ICI
       detail_livres.push({
         matiere: input.dataset.matiere,
         niveau: input.dataset.niveau,
