@@ -28,7 +28,6 @@ function calculDateExamen(dateEntree, matiere) {
   return d.toISOString().slice(0, 10);
 }
 
-// MISE À JOUR : 80 jours (Anglais/Français) et 110 jours (Allemand/Chinois)
 function estExpire(dateEntree, matiere) {
   if (!dateEntree) return false;
   const dureeJours = (matiere === 'Anglais' || matiere === 'Français') ? 80 : 110;
@@ -266,5 +265,42 @@ app.post('/api/etudiants/:id/valider-livre', authRole, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ============================================================
+   VÉRIFICATION AUTOMATIQUE TOUTES LES 24H
+   ============================================================ */
+setInterval(() => {
+  console.log("⏳ Vérification automatique des expirations...");
+  const eleves = db.prepare("SELECT id, matiere, date_entree FROM etudiants WHERE statut = 'actif'").all();
+  let count = 0;
+  for (let e of eleves) {
+    if (estExpire(e.date_entree, e.matiere)) {
+      db.prepare("UPDATE etudiants SET statut = 'archive' WHERE id = ?").run(e.id);
+      count++;
+    }
+  }
+  if (count > 0) {
+    console.log(`✅ ${count} élève(s) archivé(s) automatiquement.`);
+  } else {
+    console.log("✅ Aucun élève à archiver aujourd'hui.");
+  }
+}, 24 * 60 * 60 * 1000); // 24 heures
+
+/* ============================================================
+   DÉMARRAGE DU SERVEUR
+   ============================================================ */
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log(`UTP App démarrée sur le port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`UTP App démarrée sur le port ${PORT}`);
+  // Vérification immédiate au démarrage
+  console.log("Vérification initiale des expirations...");
+  const eleves = db.prepare("SELECT id, matiere, date_entree FROM etudiants WHERE statut = 'actif'").all();
+  let count = 0;
+  for (let e of eleves) {
+    if (estExpire(e.date_entree, e.matiere)) {
+      db.prepare("UPDATE etudiants SET statut = 'archive' WHERE id = ?").run(e.id);
+      count++;
+    }
+  }
+  if (count > 0) console.log(`✅ ${count} élève(s) archivé(s) au démarrage.`);
+});
