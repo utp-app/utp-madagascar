@@ -222,7 +222,9 @@ async function ajouterPaiement() {
 
     const r = await api('/api/paiements', 'POST', { etudiant_id, montant, tranche, mode_paiement, reference });
     
-    const dateNow = new Date().toLocaleString('fr-FR');
+    // HEURE DE MADAGASCAR
+    const dateNow = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Antananarivo' });
+    
     const ticketHTML = `
       <html><head><style>
         @media print { 
@@ -423,7 +425,7 @@ function telechargerResultatPDF(etudiant_id, criteresStr, total, appreciation) {
     return { nom: parts[0], note: parts[1], max: parts[2] };
   });
   
-  const dateNow = new Date().toLocaleString('fr-FR');
+  const dateNow = new Date().toLocaleString('fr-FR', { timeZone: 'Indian/Antananarivo' });
   
   let lignesTableau = '';
   criteres.forEach(c => {
@@ -549,7 +551,7 @@ async function commanderLivres() {
 
   inputs.forEach(input => {
     const nombre = parseInt(input.value) || 0;
-    if (nombre > 0) { // ON IGNORE LES 0 ICI
+    if (nombre > 0) {
       detail_livres.push({
         matiere: input.dataset.matiere,
         niveau: input.dataset.niveau,
