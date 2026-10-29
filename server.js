@@ -83,11 +83,11 @@ app.post('/api/login', (req, res) => {
   } else {
     centres = db.prepare(`SELECT c.* FROM centres c JOIN responsable_centres rc ON rc.centre_id = c.id WHERE rc.responsable_id = ?`).all(resp.id);
   }
-
   res.json({ utilisateur: { ...resp, role }, centres: centres });
 });
 
 app.get('/api/matieres', (req, res) => res.json(MATIERES_NIVEAUX));
+
 app.get('/api/centres', authRole, (req, res) => {
   const u = req.utilisateur;
   if (u.role === 'admin' || u.role === 'direction') res.json(db.prepare('SELECT * FROM centres ORDER BY id').all());
@@ -107,7 +107,11 @@ app.get('/api/etudiants', authRole, (req, res) => {
   } else {
     rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id JOIN responsable_centres rc ON rc.centre_id = e.centre_id WHERE rc.responsable_id = ? AND e.statut != 'archive'`).all(u.id);
   }
-  res.json(rows.map(e => ({ ...e, date_examen: calculDateExamen(e.date_entree, e.matiere) })));
+  res.json(rows.map(e => ({ 
+    ...e, 
+    date_examen_auto: calculDateExamen(e.date_entree, e.matiere),
+    date_examen_affichee: e.date_examen_validee || calculDateExamen(e.date_entree, e.matiere)
+  })));
 });
 
 app.post('/api/etudiants', authRole, (req, res) => {
@@ -117,7 +121,7 @@ app.post('/api/etudiants', authRole, (req, res) => {
   let utp_id;
   if (existant) {
     utp_id = existant.utp_id;
-    db.prepare(`UPDATE etudiants SET statut = 'actif', centre_id = ?, matiere = ?, niveau = ?, date_entree = ?, montant_paye = 0, badge_genere = 0 WHERE id = ?`).run(centre_id, matiere, niveau, date_entree || new Date().toISOString().slice(0,10), existant.id);
+    db.prepare(`UPDATE etudiants SET statut = 'actif', centre_id = ?, matiere = ?, niveau = ?, date_entree = ?, montant_paye = 0, badge_genere = 0, statut_examen = 'en_attente', date_examen_validee = NULL WHERE id = ?`).run(centre_id, matiere, niveau, date_entree || new Date().toISOString().slice(0,10), existant.id);
   } else {
     utp_id = genUtpId();
     db.prepare(`INSERT INTO etudiants (utp_id, nom, prenom, telephone, matiere, niveau, centre_id, date_entree, statut) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'actif')`).run(utp_id, nom, prenom || '', telephone || '', matiere, niveau, centre_id, date_entree || new Date().toISOString().slice(0,10));
@@ -168,6 +172,29 @@ app.post('/api/notes', authRole, (req, res) => {
   res.json({ total, appreciation, passe_niveau: passe });
 });
 
+/* ============================================================
+   PLANNING EXAMENS (DIRECTION)
+   ============================================================ */
+
+app.post('/api/direction/examens/:id/approuver', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'direction') return res.status(403).json({ error: 'Direction requise' });
+  const etudiant = db.prepare('SELECT * FROM etudiants WHERE id = ?').get(req.params.id);
+  const dateAuto = calculDateExamen(etudiant.date_entree, etudiant.matiere);
+  db.prepare("UPDATE etudiants SET statut_examen = 'approuve', date_examen_validee = ? WHERE id = ?").run(dateAuto, req.params.id);
+  res.json({ ok: true, date: dateAuto });
+});
+
+app.post('/api/direction/examens/:id/modifier', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'direction') return res.status(403).json({ error: 'Direction requise' });
+  const { nouvelle_date } = req.body;
+  db.prepare("UPDATE etudiants SET statut_examen = 'modifie', date_examen_validee = ? WHERE id = ?").run(nouvelle_date, req.params.id);
+  res.json({ ok: true, date: nouvelle_date });
+});
+
+/* ============================================================
+   ADMINISTRATION
+   ============================================================ */
+
 app.post('/api/admin/centres', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   const info = db.prepare('INSERT INTO centres (nom) VALUES (?)').run(req.body.nom);
@@ -209,7 +236,6 @@ app.delete('/api/admin/etudiants/:id', authRole, (req, res) => {
   res.json({ ok: true });
 });
 
-// --- REMISE À ZÉRO (SEUL L'ADMIN) ---
 app.post('/api/archiver-expires', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Seul l\'administrateur peut lancer la remise à zéro.' });
   const eleves = db.prepare("SELECT id, matiere, date_entree FROM etudiants WHERE statut = 'actif'").all();
