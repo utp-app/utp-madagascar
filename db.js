@@ -37,9 +37,11 @@ CREATE TABLE IF NOT EXISTS etudiants (
   centre_id INTEGER NOT NULL REFERENCES centres(id) ON DELETE CASCADE,
   responsable_id INTEGER REFERENCES responsables(id) ON DELETE SET NULL,
   date_entree TEXT NOT NULL,
+  statut_examen TEXT DEFAULT 'en_attente', -- en_attente, approuve, modifie
+  date_examen_validee TEXT, -- La date finale validée par la Direction
   montant_paye INTEGER NOT NULL DEFAULT 0,
   badge_genere INTEGER NOT NULL DEFAULT 0,
-  statut TEXT NOT NULL DEFAULT 'actif',
+  statut TEXT NOT NULL DEFAULT 'actif', -- actif, archive
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -76,12 +78,6 @@ CREATE TABLE IF NOT EXISTS notes (
   doit_repechage INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE TABLE IF NOT EXISTS parametres (
-  cle TEXT PRIMARY KEY,
-  valeur TEXT NOT NULL
-);
-
--- NOUVELLE TABLE POUR LES COMMANDES DE LIVRES
 CREATE TABLE IF NOT EXISTS commandes_livres (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   centre_id INTEGER NOT NULL REFERENCES centres(id) ON DELETE CASCADE,
@@ -89,6 +85,11 @@ CREATE TABLE IF NOT EXISTS commandes_livres (
   montant_total INTEGER NOT NULL,
   statut TEXT NOT NULL DEFAULT 'en_attente',
   date_commande TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS parametres (
+  cle TEXT PRIMARY KEY,
+  valeur TEXT NOT NULL
 );
 `);
 
