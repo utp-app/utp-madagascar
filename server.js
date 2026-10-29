@@ -143,13 +143,30 @@ app.post('/api/paiements', authRole, (req, res) => {
   res.json({ ticket_ref, montant, nouveauMontant, badge_genere: badge });
 });
 
+// --- ROUTE DE COMMANDE DE LIVRES DÉTAILLÉE ---
 app.post('/api/livres/commander', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
-  const { nombre_livres, centre_id } = req.body;
-  const montant_total = nombre_livres * 20000;
-  const info = db.prepare('INSERT INTO commandes_livres (centre_id, nombre_livres, montant_total) VALUES (?, ?, ?)').run(centre_id, nombre_livres, montant_total);
-  db.prepare('INSERT INTO depenses (centre_id, libelle, montant) VALUES (?, ?, ?)').run(centre_id, 'Achat de livres (Versement Direction)', montant_total);
-  res.json({ id: info.lastInsertRowid, montant_total });
+  
+  const { detail_livres, centre_id } = req.body; 
+  // detail_livres = [{ matiere: 'Anglais', niveau: 'L1', nombre: 10 }, ...]
+  
+  let montant_total = 0;
+  let total_livres = 0;
+
+  detail_livres.forEach(item => {
+    montant_total += item.nombre * 20000;
+    total_livres += item.nombre;
+  });
+
+  if (total_livres === 0) return res.status(400).json({ error: 'Veuillez commander au moins un livre.' });
+
+  const info = db.prepare('INSERT INTO commandes_livres (centre_id, nombre_livres, montant_total) VALUES (?, ?, ?)')
+    .run(centre_id, total_livres, montant_total);
+  
+  db.prepare('INSERT INTO depenses (centre_id, libelle, montant) VALUES (?, ?, ?)')
+    .run(centre_id, 'Achat de livres (Versement Direction)', montant_total);
+
+  res.json({ id: info.lastInsertRowid, montant_total, total_livres });
 });
 
 app.get('/api/direction/livres', authRole, (req, res) => {
@@ -214,7 +231,6 @@ app.post('/api/admin/utilisateurs', authRole, (req, res) => {
   } catch (e) { res.status(400).json({ error: 'Code déjà existant' }); }
 });
 
-// MODIFICATION D'UN ÉLÈVE
 app.put('/api/admin/etudiants/:id', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   const { nom, prenom, telephone, matiere, niveau, centre_id, montant_paye, date_entree } = req.body;
@@ -231,9 +247,7 @@ app.put('/api/admin/etudiants/:id', authRole, (req, res) => {
     db.prepare('UPDATE etudiants SET badge_genere = ? WHERE id = ?').run(badge, id);
     
     res.json({ ok: true, message: 'Élève modifié avec succès' });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 app.get('/api/admin/transactions', authRole, (req, res) => {
@@ -294,9 +308,6 @@ app.post('/api/etudiants/:id/valider-livre', authRole, (req, res) => {
   res.json({ ok: true });
 });
 
-/* ============================================================
-   VÉRIFICATION AUTOMATIQUE TOUTES LES 24H
-   ============================================================ */
 setInterval(() => {
   console.log("⏳ Vérification automatique des expirations...");
   const eleves = db.prepare("SELECT id, matiere, date_entree FROM etudiants WHERE statut = 'actif'").all();
