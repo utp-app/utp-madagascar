@@ -1,6 +1,7 @@
 let session = null;
 let centres = [];
 let matieres = {};
+let listeEleves = []; // NOUVEAU : Pour stocker les élèves et connaître leur matière/niveau
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -129,6 +130,8 @@ function majNiveaux() {
 async function chargerEtudiants() {
   try {
     const rows = await api('/api/etudiants');
+    listeEleves = rows; // On stocke la liste des élèves pour le formulaire de notes
+    
     const tbody = $('#table-etudiants tbody');
     if (!tbody) return;
 
@@ -157,12 +160,10 @@ async function chargerEtudiants() {
     const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom} (${e.matiere} ${e.niveau})</option>`).join('');
     if ($('#p-etudiant')) $('#p-etudiant').innerHTML = opts;
     if ($('#n-etudiant')) $('#n-etudiant').innerHTML = opts;
-    chargerBareme();
   } catch (e) { console.error(e); }
 }
 
 async function ajouterEtudiant() {
-  // Vérification des champs vides
   const nom = $('#e-nom').value.trim();
   const prenom = $('#e-prenom').value.trim();
   const tel = $('#e-tel').value.trim();
@@ -172,27 +173,15 @@ async function ajouterEtudiant() {
   const date = $('#e-date').value;
 
   if (!nom || !prenom || !tel || !matiere || !niveau || !centre || !date) {
-    return alert('⚠️ Veuillez remplir tous les champs obligatoires (Nom, Prénom, Contact, Matière, Niveau, Centre, Date).');
+    return alert('⚠️ Veuillez remplir tous les champs obligatoires.');
   }
 
   try {
     await api('/api/etudiants', 'POST', {
-      nom: nom,
-      prenom: prenom,
-      telephone: tel,
-      matiere: matiere,
-      niveau: niveau,
-      centre_id: parseInt(centre),
-      date_entree: date
+      nom: nom, prenom: prenom, telephone: tel, matiere: matiere, niveau: niveau, centre_id: parseInt(centre), date_entree: date
     });
     alert("✅ Étudiant ajouté !");
-    
-    // Vider les champs
-    $('#e-nom').value = ''; 
-    $('#e-prenom').value = ''; 
-    $('#e-tel').value = '';
-    $('#e-date').value = '';
-    
+    $('#e-nom').value = ''; $('#e-prenom').value = ''; $('#e-tel').value = ''; $('#e-date').value = '';
     await chargerEtudiants();
   } catch (e) { alert(e.message); }
 }
@@ -272,35 +261,135 @@ async function ajouterPaiement() {
   } catch (e) { alert(e.message); }
 }
 
-// --- NOTES ---
+// --- NOTES DYNAMIQUES ---
 function chargerBareme() {
   const id = parseInt($('#n-etudiant').value);
   if (!id) { $('#n-bareme').innerHTML = ''; return; }
-  $('#n-bareme').innerHTML = `
-    <div style="display:flex; flex-direction:column; gap:10px;">
-      <input type="number" class="note-input" placeholder="Listening / Lesen (Max 25)" max="25" />
-      <input type="number" class="note-input" placeholder="Reading / Hören (Max 25)" max="25" />
-      <input type="number" class="note-input" placeholder="Writing / Schreiben (Max 25)" max="25" />
-      <input type="number" class="note-input" placeholder="Speaking / Sprechen (Max 25)" max="25" />
+  
+  // On cherche les infos de l'élève dans la liste stockée
+  const eleve = listeEleves.find(e => e.id === id);
+  if (!eleve) return;
+  
+  const matiere = eleve.matiere;
+  const niveau = eleve.niveau;
+  
+  // Définition des barèmes
+  let bareme = [];
+  
+  if (matiere === 'Allemand' && (niveau === 'A1' || niveau === 'A2')) {
+    bareme = [
+      { nom: 'Lesen (Compréhension écrite)', max: 25 },
+      { nom: 'Hören (Compréhension orale)', max: 25 },
+      { nom: 'Schreiben (Expression écrite)', max: 25 },
+      { nom: 'Sprechen (Expression orale)', max: 25 }
+    ];
+  } else if (matiere === 'Allemand' && (niveau === 'B1' || niveau === 'B2')) {
+    bareme = [
+      { nom: 'Lesen', max: 30 },
+      { nom: 'Hören', max: 30 },
+      { nom: 'Sprechen', max: 30 },
+      { nom: 'Schreiben', max: 30 }
+    ];
+  } else if (matiere === 'Français') {
+    bareme = [
+      { nom: 'Compréhension Orale', max: 15 },
+      { nom: 'Expression Orale / Fluidité', max: 18 },
+      { nom: 'Prononciation / Intonation', max: 12 },
+      { nom: 'Grammaire', max: 9 },
+      { nom: 'Participation / Effort', max: 6 },
+      { nom: 'Soutenance Finale', max: 40 }
+    ];
+  } else if (matiere === 'Anglais' && niveau === 'L1') {
+    bareme = [
+      { nom: 'Listening', max: 30 },
+      { nom: 'Reading', max: 15 },
+      { nom: 'Writing', max: 15 },
+      { nom: 'Speaking (Conversation + Q/R)', max: 40 }
+    ];
+  } else if (matiere === 'Anglais' && (niveau === 'L2' || niveau === 'L3' || niveau === 'L4')) {
+    bareme = [
+      { nom: 'Listening', max: 15 },
+      { nom: 'Reading', max: 10 },
+      { nom: 'Writing', max: 10 },
+      { nom: 'Speaking (Conversation + Q/R)', max: 25 },
+      { nom: 'Public Speaking / Soutenance', max: 40 }
+    ];
+  } else {
+    bareme = [
+      { nom: 'Épreuve 1', max: 25 },
+      { nom: 'Épreuve 2', max: 25 },
+      { nom: 'Épreuve 3', max: 25 },
+      { nom: 'Épreuve 4', max: 25 }
+    ];
+  }
+
+  // Génération du tableau
+  let html = `<table style="width:100%; margin-top:10px; border-collapse: collapse;">
+    <thead><tr><th style="background:#1e3a5f; color:white; padding:10px;">Épreuve / Critère</th><th style="background:#1e3a5f; color:white; padding:10px;">Barème</th><th style="background:#1e3a5f; color:white; padding:10px;">Note</th></tr></thead><tbody>`;
+  
+  bareme.forEach((b) => {
+    html += `
+      <tr>
+        <td style="padding:10px; border-bottom:1px solid #eee;">${b.nom}</td>
+        <td style="padding:10px; border-bottom:1px solid #eee;">${b.max} pts</td>
+        <td style="padding:10px; border-bottom:1px solid #eee;"><input type="number" class="note-input" data-max="${b.max}" max="${b.max}" min="0" placeholder="0" oninput="calculerTotalNote()" style="width:80px; padding:5px; border:1px solid #ccc; border-radius:4px;" /></td>
+      </tr>
+    `;
+  });
+  
+  html += `</tbody></table>
+    <div style="margin-top:20px; font-size:18px; font-weight:bold; text-align:center; color:#1A237E; background:#E3F2FD; padding:15px; border-radius:8px;">
+      TOTAL : <span id="total-note-affiche">0</span> / <span id="total-bareme-affiche">${bareme.reduce((s, b) => s + b.max, 0)}</span>
     </div>
   `;
+  
+  $('#n-bareme').innerHTML = html;
+  calculerTotalNote();
+}
+
+function calculerTotalNote() {
+  const inputs = document.querySelectorAll('.note-input');
+  let total = 0;
+  inputs.forEach(input => {
+    total += parseInt(input.value) || 0;
+  });
+  document.getElementById('total-note-affiche').textContent = total;
 }
 
 async function enregistrerNote() {
   const etudiant_id = parseInt($('#n-etudiant').value);
   const type_examen = $('#n-type').value;
   const inputs = document.querySelectorAll('.note-input');
+  
+  if (inputs.length === 0) return alert('Veuillez sélectionner un élève.');
+  
   let total = 0;
   let detail = {};
+  
   inputs.forEach((input, index) => {
     const val = parseInt(input.value) || 0;
     total += val;
-    detail['critere' + index] = val;
+    detail['critere_' + index] = val;
   });
+
+  if (total === 0) return alert('Veuillez saisir au moins une note.');
 
   try {
     const r = await api('/api/notes', 'POST', { etudiant_id, detail, total, type_examen });
-    $('#note-result').innerHTML = `<div class="card" style="background:#E3F2FD; border:1px solid #BBDEFB;"><h3>Résultat : ${r.total}/100</h3><p>Mention : ${r.appreciation}</p></div>`;
+    
+    let mentionColor = r.passe_niveau ? '#2E7D32' : '#C62828';
+    let mentionText = r.passe_niveau ? '✅ Admis au niveau supérieur' : '⚠️ Repêchage nécessaire';
+    
+    $('#note-result').innerHTML = `
+      <div class="card" style="background:#E3F2FD; border:1px solid #BBDEFB;">
+        <h3 style="color:#1A237E;">Résultat de l'examen</h3>
+        <p style="font-size:16px;"><strong>Total :</strong> ${r.total} / 100</p>
+        <p style="font-size:16px;"><strong>Mention :</strong> ${r.appreciation}</p>
+        <p style="font-size:16px; color:${mentionColor}; font-weight:bold;">${mentionText}</p>
+      </div>`;
+      
+    await chargerEtudiants();
+    $('#n-bareme').innerHTML = '';
   } catch (e) { alert(e.message); }
 }
 
