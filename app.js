@@ -206,7 +206,6 @@ async function ajouterPaiement() {
   const mode_paiement = $('#p-mode').value;
   const reference = $('#p-reference').value;
   
-  // On récupère le format choisi
   const formatChoisi = document.getElementById('p-format').value;
   const largeurTicket = formatChoisi === '58' ? '58mm' : '80mm';
   const largeurPolice = formatChoisi === '58' ? '10px' : '12px';
