@@ -69,7 +69,7 @@ async function afficherInterface() {
     $('#btn-admin').style.display = 'none';
     $('#btn-direction').style.display = 'none';
     if (centres.length === 0) await init(); 
-    showTab('etudiants');
+    showTab('dashboard');
   }
 }
 
@@ -98,6 +98,10 @@ function showTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   const target = document.getElementById('tab-' + name);
   if (target) target.classList.add('active');
+  
+  if (name === 'dashboard') {
+    chargerDashboard();
+  }
 }
 
 async function init() {
@@ -120,6 +124,7 @@ async function init() {
     }
     await chargerEtudiants();
     genererTableauLivres();
+    await chargerDashboard();
   } catch (e) { console.error("Erreur d'initialisation :", e); }
 }
 
@@ -583,7 +588,6 @@ async function ajouterDepense() {
     return alert('⚠️ Veuillez remplir le libellé et le montant.');
   }
   
-  // On utilise le centre actuellement sélectionné dans le formulaire d'inscription
   const centre_id = parseInt($('#e-centre').value);
   
   try {
@@ -591,5 +595,53 @@ async function ajouterDepense() {
     alert('✅ Dépense enregistrée avec succès !');
     document.getElementById('d-libelle').value = '';
     document.getElementById('d-montant').value = '';
+    await chargerDashboard(); // Rafraîchir le tableau de bord
   } catch (e) { alert('Erreur : ' + e.message); }
+}
+
+// --- TABLEAU DE BORD RESPONSABLE ---
+async function chargerDashboard() {
+  try {
+    const stats = await api('/api/responsable/stats');
+    
+    let html = `
+      <div style="display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap;">
+        <div class="card" style="flex:1; min-width:200px; background:#E8F5E9; border-left:5px solid #2E7D32;">
+          <h3 style="color:#2E7D32; border:none; margin-bottom:5px;">Recettes</h3>
+          <div style="font-size:24px; font-weight:900; color:#2E7D32;">+${stats.totalRecettes.toLocaleString()} Ar</div>
+        </div>
+        <div class="card" style="flex:1; min-width:200px; background:#FFEBEE; border-left:5px solid #C62828;">
+          <h3 style="color:#C62828; border:none; margin-bottom:5px;">Dépenses</h3>
+          <div style="font-size:24px; font-weight:900; color:#C62828;">-${stats.totalDepenses.toLocaleString()} Ar</div>
+        </div>
+        <div class="card" style="flex:1; min-width:200px; background:#E3F2FD; border-left:5px solid #1565C0;">
+          <h3 style="color:#1565C0; border:none; margin-bottom:5px;">Solde Total</h3>
+          <div style="font-size:24px; font-weight:900; color:#1565C0;">${stats.solde.toLocaleString()} Ar</div>
+        </div>
+      </div>
+      
+      <h3>Détail par centre :</h3>
+      <table style="margin-top:10px;">
+        <thead><tr><th>Centre</th><th>Recettes</th><th>Dépenses</th><th>Solde</th></tr></thead>
+        <tbody>
+    `;
+    
+    stats.detailCentres.forEach(c => {
+      let color = c.solde >= 0 ? '#2E7D32' : '#C62828';
+      html += `
+        <tr>
+          <td><strong>${c.nom}</strong></td>
+          <td style="color:#2E7D32;">+${c.recettes.toLocaleString()} Ar</td>
+          <td style="color:#C62828;">-${c.depenses.toLocaleString()} Ar</td>
+          <td style="color:${color}; font-weight:bold;">${c.solde.toLocaleString()} Ar</td>
+        </tr>
+      `;
+    });
+    
+    html += `</tbody></table>`;
+    
+    document.getElementById('dashboard-content').innerHTML = html;
+  } catch (e) {
+    document.getElementById('dashboard-content').innerHTML = `<p style="color:red;">Erreur : ${e.message}</p>`;
+  }
 }
