@@ -142,6 +142,8 @@ async function chargerEtudiants() {
 
     const opts = rows.map(e => `<option value="${e.id}">${e.utp_id} – ${e.nom} (${e.matiere} ${e.niveau})</option>`).join('');
     if ($('#p-etudiant')) $('#p-etudiant').innerHTML = opts;
+    if ($('#n-etudiant')) $('#n-etudiant').innerHTML = opts;
+    chargerBareme();
   } catch (e) { console.error(e); }
 }
 
@@ -233,5 +235,61 @@ async function ajouterPaiement() {
     
     await chargerEtudiants(); 
     $('#p-montant').value = ''; $('#p-reference').value = '';
+  } catch (e) { alert(e.message); }
+}
+
+// --- NOTES ---
+function chargerBareme() {
+  const id = parseInt($('#n-etudiant').value);
+  if (!id) { $('#n-bareme').innerHTML = ''; return; }
+  const e = centres.find(x => x.id === id); // Juste pour vérifier qu'on a un élève
+  
+  // Barèmes simplifiés pour l'exemple
+  $('#n-bareme').innerHTML = `
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <input type="number" class="note-input" placeholder="Listening / Lesen (Max 25)" max="25" />
+      <input type="number" class="note-input" placeholder="Reading / Hören (Max 25)" max="25" />
+      <input type="number" class="note-input" placeholder="Writing / Schreiben (Max 25)" max="25" />
+      <input type="number" class="note-input" placeholder="Speaking / Sprechen (Max 25)" max="25" />
+    </div>
+  `;
+}
+
+async function enregistrerNote() {
+  const etudiant_id = parseInt($('#n-etudiant').value);
+  const type_examen = $('#n-type').value;
+  const inputs = document.querySelectorAll('.note-input');
+  let total = 0;
+  let detail = {};
+  inputs.forEach((input, index) => {
+    const val = parseInt(input.value) || 0;
+    total += val;
+    detail['critere' + index] = val;
+  });
+
+  try {
+    const r = await api('/api/notes', 'POST', { etudiant_id, detail, total, type_examen });
+    $('#note-result').innerHTML = `<div class="card" style="background:#E3F2FD; border:1px solid #BBDEFB;"><h3>Résultat : ${r.total}/100</h3><p>Mention : ${r.appreciation}</p></div>`;
+  } catch (e) { alert(e.message); }
+}
+
+// --- LIVRES ---
+document.addEventListener('input', function(e) {
+  if (e.target.id === 'l-nombre') {
+    const total = e.target.value * 20000;
+    document.getElementById('l-total').value = total > 0 ? total.toLocaleString() + ' Ar' : '';
+  }
+});
+
+async function commanderLivres() {
+  const nombre = parseInt($('#l-nombre').value);
+  const centre_id = parseInt($('#e-centre').value);
+  if (!nombre || nombre <= 0) return alert('Veuillez saisir un nombre valide.');
+  
+  try {
+    const r = await api('/api/livres/commander', 'POST', { nombre_livres: nombre, centre_id });
+    alert(`✅ Commande envoyée à la Direction !\nMontant : ${r.montant_total.toLocaleString()} Ar\n\nCet argent a été déduit de votre caisse.`);
+    $('#l-nombre').value = '';
+    $('#l-total').value = '';
   } catch (e) { alert(e.message); }
 }
