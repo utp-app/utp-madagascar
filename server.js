@@ -193,6 +193,42 @@ app.get('/api/responsable/stats', authRole, (req, res) => {
   res.json({ totalRecettes, totalDepenses, solde: totalRecettes - totalDepenses, detailCentres });
 });
 
+// --- RAPPORT COMPTABLE (JOURNAL DES MOUVEMENTS) ---
+app.get('/api/responsable/rapport-comptable', authRole, (req, res) => {
+  if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
+  const u = req.utilisateur;
+  const centres = db.prepare(`
+    SELECT c.id FROM centres c 
+    JOIN responsable_centres rc ON rc.centre_id = c.id 
+    WHERE rc.responsable_id = ?
+  `).all(u.id).map(c => c.id);
+
+  if (centres.length === 0) return res.json([]);
+
+  const placeholders = centres.map(() => '?').join(',');
+  
+  const recettes = db.prepare(`
+    SELECT p.date_paiement as date, 'Recette' as type, 
+           'Paiement ' || e.nom || ' ' || e.prenom || ' (' || e.utp_id || ')' as libelle, 
+           p.montant, c.nom as centre_nom
+    FROM paiements p 
+    JOIN etudiants e ON e.id = p.etudiant_id 
+    JOIN centres c ON c.id = e.centre_id
+    WHERE e.centre_id IN (${placeholders})
+  `).all(...centres);
+
+  const depenses = db.prepare(`
+    SELECT d.date_depense as date, 'Dépense' as type, 
+           d.libelle, d.montant, c.nom as centre_nom
+    FROM depenses d 
+    JOIN centres c ON c.id = d.centre_id
+    WHERE d.centre_id IN (${placeholders})
+  `).all(...centres);
+
+  const mouvements = [...recettes, ...depenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+  res.json(mouvements);
+});
+
 app.post('/api/notes', authRole, (req, res) => {
   const { etudiant_id, detail, total, type_examen } = req.body;
   const etudiant = db.prepare('SELECT * FROM etudiants WHERE id = ?').get(etudiant_id);
