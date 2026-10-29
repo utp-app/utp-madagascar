@@ -33,20 +33,20 @@
          INTERFACE RÉSERVÉE AUX RESPONSABLES DE CENTRE 
          ============================================== -->
     <div id="interface-responsable" style="display:none;">
+      <!-- MENU AVEC BOUTON DECONNEXION A DROITE -->
       <nav>
         <button onclick="showTab('etudiants')">Étudiants</button>
         <button onclick="showTab('paiements')">Paiements</button>
         <button onclick="showTab('notes')">Notes</button>
         <button onclick="showTab('livres')">📚 Livres</button>
         <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
-        <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
+        <button id="btn-deconnexion" onclick="logout()">Déconnexion</button>
       </nav>
 
       <!-- Onglet Étudiants (Inscription) -->
       <div id="tab-etudiants" class="tab active">
-        <h2>Inscrire un étudiant</h2>
+        <h2 style="text-align: center; color: #1e3a5f;">Inscrire un étudiant</h2>
         <div class="card" id="form-etudiant">
-          <!-- AJOUT DE L'ATTRIBUT REQUIRED POUR RENDRE LES CHAMPS OBLIGATOIRES -->
           <input id="e-nom" placeholder="Nom" required />
           <input id="e-prenom" placeholder="Prénom" required />
           <input id="e-tel" placeholder="Contact (Téléphone)" required />
@@ -54,9 +54,10 @@
           <select id="e-niveau" required></select>
           <select id="e-centre" required></select>
           <input id="e-date" type="date" required />
-          <button onclick="ajouterEtudiant()">Ajouter l'élève</button>
+          <button class="btn-submit" onclick="ajouterEtudiant()">Ajouter l'élève</button>
         </div>
-        <h3>Liste de mes élèves</h3>
+        
+        <h3 style="text-align: center; color: #1e3a5f; margin-top: 30px;">Liste de mes élèves</h3>
         <table id="table-etudiants">
           <thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Centre</th><th>Payé</th><th>Badge</th><th>Date</th></tr></thead>
           <tbody></tbody>
@@ -65,9 +66,9 @@
 
       <!-- Onglet Paiements -->
       <div id="tab-paiements" class="tab">
-        <h2>Enregistrer un paiement</h2>
+        <h2 style="text-align: center; color: #1e3a5f;">Enregistrer un paiement</h2>
         <div class="card">
-          <select id="p-etudiant" style="width:100%; margin-bottom:15px;"></select>
+          <select id="p-etudiant" style="margin-bottom:15px;"></select>
           
           <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Montant total de la formation (Ar)</label>
           <input id="p-total" type="number" value="50000" placeholder="Montant total" style="margin-bottom:15px;" oninput="calculerReste()" />
@@ -95,14 +96,14 @@
           
           <input id="p-reference" type="text" placeholder="Référence (N° transaction)" style="display:none; margin-bottom:15px;" />
           
-          <button onclick="ajouterPaiement()">Enregistrer et générer le ticket</button>
+          <button class="btn-submit" onclick="ajouterPaiement()">Enregistrer et générer le ticket</button>
         </div>
         <div id="ticket-result"></div>
       </div>
 
       <!-- Onglet Notes -->
       <div id="tab-notes" class="tab">
-        <h2>Fiche de Note</h2>
+        <h2 style="text-align: center; color: #1e3a5f;">Fiche de Note</h2>
         <div class="card">
           <select id="n-etudiant" onchange="chargerBareme()" style="margin-bottom:15px;"></select>
           <select id="n-type" style="margin-bottom:15px;">
@@ -110,19 +111,19 @@
             <option value="reprise">Repêchage</option>
           </select>
           <div id="n-bareme" style="margin-bottom:15px;"></div>
-          <button onclick="enregistrerNote()">Enregistrer la note</button>
+          <button class="btn-submit" onclick="enregistrerNote()">Enregistrer la note</button>
         </div>
         <div id="note-result"></div>
       </div>
 
       <!-- Onglet Livres -->
       <div id="tab-livres" class="tab">
-        <h2>Commander des livres</h2>
+        <h2 style="text-align: center; color: #1e3a5f;">Commander des livres</h2>
         <div class="card">
-          <p style="font-size:13px; color:#666; margin-bottom:15px;">Chaque livre coûte 20 000 Ar. Le montant sera automatiquement déduit de votre caisse et versé à la Direction.</p>
+          <p style="font-size:13px; color:#666; margin-bottom:15px; text-align:center;">Chaque livre coûte 20 000 Ar. Le montant sera automatiquement déduit de votre caisse et versé à la Direction.</p>
           <input id="l-nombre" type="number" placeholder="Nombre de livres à commander" style="margin-bottom:15px;" />
           <input id="l-total" type="text" readonly placeholder="Montant total (Ar)" style="background:#eee; margin-bottom:15px;" />
-          <button onclick="commanderLivres()">Envoyer la commande à la Direction</button>
+          <button class="btn-submit" onclick="commanderLivres()">Envoyer la commande à la Direction</button>
         </div>
       </div>
     </div>
@@ -131,10 +132,10 @@
          INTERFACE RÉSERVÉE À L'ADMIN ET LA DIRECTION 
          ============================================== -->
     <div id="interface-admin-direction" style="display:none; text-align:center; margin-top: 50px;">
-      <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; padding: 20px; font-size: 18px; background:#00897B; color:white; border-radius:10px; cursor:pointer; margin:10px; width:auto;">⚙️ Paramétrage Admin</button>
-      <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; padding: 20px; font-size: 18px; background:#E65100; color:white; border-radius:10px; cursor:pointer; margin:10px; width:auto;">⭐ Tableau de Bord Direction</button>
+      <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; padding: 20px; font-size: 18px; background:#00897B; color:white; border-radius:10px; cursor:pointer; margin:10px; width:auto; border:none;">⚙️ Paramétrage Admin</button>
+      <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; padding: 20px; font-size: 18px; background:#E65100; color:white; border-radius:10px; cursor:pointer; margin:10px; width:auto; border:none;">⭐ Tableau de Bord Direction</button>
       <br><br>
-      <button onclick="logout()" style="padding: 10px 20px; background:#e74c3c; color:white; border-radius:5px; cursor:pointer; width:auto;">Déconnexion</button>
+      <button onclick="logout()" style="padding: 10px 20px; background:#e74c3c; color:white; border-radius:5px; cursor:pointer; width:auto; border:none;">Déconnexion</button>
     </div>
   </section>
 
