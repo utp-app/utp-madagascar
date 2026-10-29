@@ -37,11 +37,11 @@ CREATE TABLE IF NOT EXISTS etudiants (
   centre_id INTEGER NOT NULL REFERENCES centres(id) ON DELETE CASCADE,
   responsable_id INTEGER REFERENCES responsables(id) ON DELETE SET NULL,
   date_entree TEXT NOT NULL,
-  statut_examen TEXT DEFAULT 'en_attente', -- en_attente, approuve, modifie
-  date_examen_validee TEXT, -- La date finale validée par la Direction
+  statut_examen TEXT DEFAULT 'en_attente',
+  date_examen_validee TEXT,
   montant_paye INTEGER NOT NULL DEFAULT 0,
   badge_genere INTEGER NOT NULL DEFAULT 0,
-  statut TEXT NOT NULL DEFAULT 'actif', -- actif, archive
+  statut TEXT NOT NULL DEFAULT 'actif',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -93,9 +93,10 @@ CREATE TABLE IF NOT EXISTS parametres (
 );
 `);
 
+// MISE À JOUR DES DURÉES (80 jours et 110 jours)
 const insertParam = db.prepare(`INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)`);
-insertParam.run('duree_anglais_francais_jours', '70');
-insertParam.run('duree_allemand_chinois_jours', '100');
+insertParam.run('duree_anglais_francais_jours', '80');
+insertParam.run('duree_allemand_chinois_jours', '110');
 insertParam.run('montant_badge_min', '20000');
 insertParam.run('frais_direction_par_etudiant', '20000');
 insertParam.run('montant_total_formation', '50000');
