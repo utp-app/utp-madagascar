@@ -99,13 +99,28 @@ app.get('/api/responsables', authRole, (req, res) => {
   res.json(db.prepare(`SELECT r.id, r.nom, r.code_acces, GROUP_CONCAT(c.nom, ', ') as centres_noms FROM responsables r LEFT JOIN responsable_centres rc ON rc.responsable_id = r.id LEFT JOIN centres c ON c.id = rc.centre_id WHERE r.code_acces NOT IN ('ADMIN2030', 'COORDO0009') GROUP BY r.id`).all());
 });
 
+// ROUTE MODIFIÉE POUR INCLURE LE TÉLÉPHONE DU RESPONSABLE
 app.get('/api/etudiants', authRole, (req, res) => {
   const u = req.utilisateur;
   let rows;
   if (u.role === 'admin' || u.role === 'direction') {
-    rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id WHERE e.statut != 'archive'`).all();
+    rows = db.prepare(`
+      SELECT e.*, c.nom AS centre_nom, r.telephone AS responsable_tel 
+      FROM etudiants e 
+      JOIN centres c ON c.id = e.centre_id 
+      LEFT JOIN responsable_centres rc ON rc.centre_id = c.id
+      LEFT JOIN responsables r ON r.id = rc.responsable_id
+      WHERE e.statut != 'archive'
+    `).all();
   } else {
-    rows = db.prepare(`SELECT e.*, c.nom AS centre_nom FROM etudiants e JOIN centres c ON c.id = e.centre_id JOIN responsable_centres rc ON rc.centre_id = e.centre_id WHERE rc.responsable_id = ? AND e.statut != 'archive'`).all(u.id);
+    rows = db.prepare(`
+      SELECT e.*, c.nom AS centre_nom, r.telephone AS responsable_tel 
+      FROM etudiants e 
+      JOIN centres c ON c.id = e.centre_id 
+      JOIN responsable_centres rc ON rc.centre_id = e.centre_id
+      JOIN responsables r ON r.id = rc.responsable_id
+      WHERE rc.responsable_id = ? AND e.statut != 'archive'
+    `).all(u.id);
   }
   res.json(rows.map(e => ({ 
     ...e, 
@@ -197,34 +212,11 @@ app.get('/api/responsable/stats', authRole, (req, res) => {
 app.get('/api/responsable/rapport-comptable', authRole, (req, res) => {
   if (req.utilisateur.role !== 'responsable') return res.status(403).json({ error: 'Responsable requis' });
   const u = req.utilisateur;
-  const centres = db.prepare(`
-    SELECT c.id FROM centres c 
-    JOIN responsable_centres rc ON rc.centre_id = c.id 
-    WHERE rc.responsable_id = ?
-  `).all(u.id).map(c => c.id);
-
+  const centres = db.prepare(`SELECT c.id FROM centres c JOIN responsable_centres rc ON rc.centre_id = c.id WHERE rc.responsable_id = ?`).all(u.id).map(c => c.id);
   if (centres.length === 0) return res.json([]);
-
   const placeholders = centres.map(() => '?').join(',');
-  
-  const recettes = db.prepare(`
-    SELECT p.date_paiement as date, 'Recette' as type, 
-           'Paiement ' || e.nom || ' ' || e.prenom || ' (' || e.utp_id || ')' as libelle, 
-           p.montant, c.nom as centre_nom
-    FROM paiements p 
-    JOIN etudiants e ON e.id = p.etudiant_id 
-    JOIN centres c ON c.id = e.centre_id
-    WHERE e.centre_id IN (${placeholders})
-  `).all(...centres);
-
-  const depenses = db.prepare(`
-    SELECT d.date_depense as date, 'Dépense' as type, 
-           d.libelle, d.montant, c.nom as centre_nom
-    FROM depenses d 
-    JOIN centres c ON c.id = d.centre_id
-    WHERE d.centre_id IN (${placeholders})
-  `).all(...centres);
-
+  const recettes = db.prepare(`SELECT p.date_paiement as date, 'Recette' as type, 'Paiement ' || e.nom || ' ' || e.prenom || ' (' || e.utp_id || ')' as libelle, p.montant, c.nom as centre_nom FROM paiements p JOIN etudiants e ON e.id = p.etudiant_id JOIN centres c ON c.id = e.centre_id WHERE e.centre_id IN (${placeholders})`).all(...centres);
+  const depenses = db.prepare(`SELECT d.date_depense as date, 'Dépense' as type, d.libelle, d.montant, c.nom as centre_nom FROM depenses d JOIN centres c ON c.id = d.centre_id WHERE d.centre_id IN (${placeholders})`).all(...centres);
   const mouvements = [...recettes, ...depenses].sort((a, b) => new Date(b.date) - new Date(a.date));
   res.json(mouvements);
 });
