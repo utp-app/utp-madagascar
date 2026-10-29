@@ -119,6 +119,7 @@ async function init() {
       majNiveaux();
     }
     await chargerEtudiants();
+    genererTableauLivres(); // On génère le tableau des livres au démarrage
   } catch (e) { console.error("Erreur d'initialisation :", e); }
 }
 
@@ -501,23 +502,72 @@ function telechargerResultatPDF(etudiant_id, criteresStr, total, appreciation) {
   win.document.close();
 }
 
-// --- LIVRES ---
-document.addEventListener('input', function(e) {
-  if (e.target.id === 'l-nombre') {
-    const total = e.target.value * 20000;
-    document.getElementById('l-total').value = total > 0 ? total.toLocaleString() + ' Ar' : '';
-  }
-});
+// --- COMMANDER DES LIVRES ---
+function genererTableauLivres() {
+  const tbody = document.getElementById('tbody-commande-livres');
+  if (!tbody) return;
+
+  const combinaisons = [
+    { matiere: 'Anglais', niveaux: ['L1', 'L2', 'L3', 'L4'] },
+    { matiere: 'Français', niveaux: ['L1', 'L2', 'L3', 'L4'] },
+    { matiere: 'Allemand', niveaux: ['A1', 'A2', 'B1', 'B2'] },
+    { matiere: 'Chinois', niveaux: ['HSK 1', 'HSK 2', 'HSK 3', 'HSK 4'] }
+  ];
+
+  let html = '';
+  combinaisons.forEach(c => {
+    c.niveaux.forEach(n => {
+      html += `
+        <tr>
+          <td style="padding:10px; border-bottom:1px solid #eee;">${c.matiere} - ${n}</td>
+          <td style="padding:10px; border-bottom:1px solid #eee; text-align:center;">
+            <input type="number" class="livre-input" data-matiere="${c.matiere}" data-niveau="${n}" min="0" value="0" oninput="calculerTotalLivres()" style="width:80px; padding:8px; border:1px solid #ccc; border-radius:4px; text-align:center;" />
+          </td>
+        </tr>
+      `;
+    });
+  });
+
+  tbody.innerHTML = html;
+}
+
+function calculerTotalLivres() {
+  const inputs = document.querySelectorAll('.livre-input');
+  let totalLivres = 0;
+  inputs.forEach(input => {
+    totalLivres += parseInt(input.value) || 0;
+  });
+  
+  document.getElementById('total-livres-affiche').textContent = totalLivres;
+  document.getElementById('total-montant-affiche').textContent = (totalLivres * 20000).toLocaleString() + ' Ar';
+}
 
 async function commanderLivres() {
-  const nombre = parseInt($('#l-nombre').value);
-  const centre_id = parseInt($('#e-centre').value);
-  if (!nombre || nombre <= 0) return alert('Veuillez saisir un nombre valide.');
+  const inputs = document.querySelectorAll('.livre-input');
+  const detail_livres = [];
+  let totalLivres = 0;
+
+  inputs.forEach(input => {
+    const nombre = parseInt(input.value) || 0;
+    if (nombre > 0) {
+      detail_livres.push({
+        matiere: input.dataset.matiere,
+        niveau: input.dataset.niveau,
+        nombre: nombre
+      });
+      totalLivres += nombre;
+    }
+  });
+
+  if (totalLivres === 0) return alert('Veuillez commander au moins un livre.');
   
+  const centre_id = parseInt($('#e-centre').value);
+
   try {
-    const r = await api('/api/livres/commander', 'POST', { nombre_livres: nombre, centre_id });
-    alert(`✅ Commande envoyée à la Direction !\nMontant : ${r.montant_total.toLocaleString()} Ar\n\nCet argent a été déduit de votre caisse.`);
-    $('#l-nombre').value = '';
-    $('#l-total').value = '';
+    const r = await api('/api/livres/commander', 'POST', { detail_livres, centre_id });
+    alert(`✅ Commande envoyée à la Direction !\n${totalLivres} livres = ${r.montant_total.toLocaleString()} Ar\n\nCet argent a été déduit de votre caisse.`);
+    
+    document.querySelectorAll('.livre-input').forEach(input => input.value = 0);
+    calculerTotalLivres();
   } catch (e) { alert(e.message); }
 }
