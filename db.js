@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS commandes_livres (
   centre_id INTEGER NOT NULL REFERENCES centres(id) ON DELETE CASCADE,
   nombre_livres INTEGER NOT NULL,
   montant_total INTEGER NOT NULL,
+  details TEXT, -- NOUVEAU : Stocke le détail JSON (matière, niveau, quantité)
   statut TEXT NOT NULL DEFAULT 'en_attente',
   date_commande TEXT DEFAULT (datetime('now'))
 );
@@ -93,7 +94,6 @@ CREATE TABLE IF NOT EXISTS parametres (
 );
 `);
 
-// MISE À JOUR DES DURÉES (80 jours et 110 jours)
 const insertParam = db.prepare(`INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)`);
 insertParam.run('duree_anglais_francais_jours', '80');
 insertParam.run('duree_allemand_chinois_jours', '110');
