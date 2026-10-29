@@ -46,13 +46,14 @@
       <div id="tab-etudiants" class="tab active">
         <h2>Inscrire un étudiant</h2>
         <div class="card" id="form-etudiant">
-          <input id="e-nom" placeholder="Nom" />
-          <input id="e-prenom" placeholder="Prénom" />
-          <input id="e-tel" placeholder="Contact (Téléphone)" />
-          <select id="e-matiere"></select>
-          <select id="e-niveau"></select>
-          <select id="e-centre"></select>
-          <input id="e-date" type="date" />
+          <!-- AJOUT DE L'ATTRIBUT REQUIRED POUR RENDRE LES CHAMPS OBLIGATOIRES -->
+          <input id="e-nom" placeholder="Nom" required />
+          <input id="e-prenom" placeholder="Prénom" required />
+          <input id="e-tel" placeholder="Contact (Téléphone)" required />
+          <select id="e-matiere" required></select>
+          <select id="e-niveau" required></select>
+          <select id="e-centre" required></select>
+          <input id="e-date" type="date" required />
           <button onclick="ajouterEtudiant()">Ajouter l'élève</button>
         </div>
         <h3>Liste de mes élèves</h3>
