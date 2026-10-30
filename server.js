@@ -99,7 +99,6 @@ app.get('/api/responsables', authRole, (req, res) => {
   res.json(db.prepare(`SELECT r.id, r.nom, r.code_acces, r.telephone, GROUP_CONCAT(c.nom, ', ') as centres_noms FROM responsables r LEFT JOIN responsable_centres rc ON rc.responsable_id = r.id LEFT JOIN centres c ON c.id = rc.centre_id WHERE r.code_acces NOT IN ('ADMIN2030', 'COORDO0009') GROUP BY r.id`).all());
 });
 
-// ROUTE MODIFICATION TELEPHONE
 app.put('/api/admin/responsables/:id/telephone', authRole, (req, res) => {
   if (req.utilisateur.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   const { telephone } = req.body;
@@ -109,6 +108,7 @@ app.put('/api/admin/responsables/:id/telephone', authRole, (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
+// REQUETE CORRIGÉE POUR L'ADMIN ET LA DIRECTION
 app.get('/api/etudiants', authRole, (req, res) => {
   const u = req.utilisateur;
   let rows;
@@ -116,7 +116,7 @@ app.get('/api/etudiants', authRole, (req, res) => {
     rows = db.prepare(`
       SELECT e.*, c.nom AS centre_nom, r.telephone AS responsable_tel 
       FROM etudiants e 
-      JOIN centres c ON c.id = e.centre_id 
+      LEFT JOIN centres c ON c.id = e.centre_id 
       LEFT JOIN responsable_centres rc ON rc.centre_id = c.id
       LEFT JOIN responsables r ON r.id = rc.responsable_id
       WHERE e.statut != 'archive'
@@ -125,9 +125,9 @@ app.get('/api/etudiants', authRole, (req, res) => {
     rows = db.prepare(`
       SELECT e.*, c.nom AS centre_nom, r.telephone AS responsable_tel 
       FROM etudiants e 
-      JOIN centres c ON c.id = e.centre_id 
-      JOIN responsable_centres rc ON rc.centre_id = e.centre_id
-      JOIN responsables r ON r.id = rc.responsable_id
+      LEFT JOIN centres c ON c.id = e.centre_id 
+      LEFT JOIN responsable_centres rc ON rc.centre_id = e.centre_id
+      LEFT JOIN responsables r ON r.id = rc.responsable_id
       WHERE rc.responsable_id = ? AND e.statut != 'archive'
     `).all(u.id);
   }
