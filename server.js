@@ -1,24 +1,22 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const sql = require('./db'); // Notre nouvelle connexion PostgreSQL
+const sql = require('./db'); // Notre connexion PostgreSQL
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'votre_secret_super_securise';
+const JWT_SECRET = process.env.JWT_SECRET || 'secret_utp_2026';
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- AUTHENTIFICATION (Middleware) ---
+// --- MIDDLEWARE D'AUTHENTIFICATION ---
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    
     if (!token) return res.sendStatus(401);
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
@@ -28,18 +26,24 @@ function authenticateToken(req, res, next) {
     });
 }
 
-// --- ROUTES D'AUTHENTIFICATION ---
+// --- ROUTE DE CONNEXION ---
 app.post('/api/login', async (req, res) => {
     const { code_acces } = req.body;
     try {
+        // Requête PostgreSQL pour trouver le responsable
         const result = await sql`SELECT * FROM responsables WHERE code_acces = ${code_acces}`;
-        if (result.length === 0) return res.status(401).json({ error: 'Code incorrect' });
+        
+        if (result.length === 0) {
+            return res.status(401).json({ error: 'Code incorrect' });
+        }
         
         const user = result[0];
+        // Création du token
         const token = jwt.sign({ id: user.id, nom: user.nom, code: user.code_acces }, JWT_SECRET, { expiresIn: '8h' });
         res.json({ token, user: { nom: user.nom, code: user.code_acces } });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error(err);
+        res.status(500).json({ error: 'Erreur serveur' });
     }
 });
 
@@ -77,26 +81,23 @@ app.delete('/api/eleves/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// --- ROUTES POUR LES PAIEMENTS (Exemple basé sur votre code) ---
+// --- ROUTE POUR LES PAIEMENTS (Badge) ---
 app.post('/api/paiements', authenticateToken, async (req, res) => {
     const { eleve_id, montant, type, centre } = req.body;
     try {
-        // 1. Enregistrer le paiement
         await sql`
             INSERT INTO paiements (eleve_id, montant, type, centre, date) 
             VALUES (${eleve_id}, ${montant}, ${type}, ${centre}, NOW())
         `;
-        
-        // 2. Mettre à jour l'élève pour dire qu'il a payé (si vous avez une colonne 'paye')
+        // Mettre à jour l'élève pour dire qu'il a payé
         await sql`UPDATE eleves SET paye = true WHERE id = ${eleve_id}`;
-
-        res.status(201).json({ message: 'Paiement enregistré avec succès' });
+        res.status(201).json({ message: 'Paiement enregistré' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// --- DÉMARRAGE DU SERVEUR ---
+// --- DÉMARRAGE ---
 app.listen(PORT, () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 });
