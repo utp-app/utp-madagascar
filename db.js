@@ -1,14 +1,12 @@
 const postgres = require('postgres');
 
-// On récupère l'URL de connexion depuis les variables d'environnement de Render
+// On récupère l'URL depuis Render (variable DATABASE_URL)
 const connectionString = process.env.DATABASE_URL;
 
-// On crée la connexion avec les options recommandées par Supabase
-// prepare: false est très important pour éviter les erreurs avec le "Transaction Pooler"
+// Connexion avec les options pour le pooler de Supabase
 const sql = postgres(connectionString, { 
     prepare: false,
-    ssl: 'require' 
+    ssl: 'require'
 });
 
-// On exporte la connexion pour l'utiliser dans le reste de l'application (server.js, etc.)
 module.exports = sql;
