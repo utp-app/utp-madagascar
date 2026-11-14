@@ -1,82 +1,122 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UTP – Gestion des centres</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTP - Connexion</title>
+    <!-- Lien vers votre fichier CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Styles de base pour la page de connexion si non définis dans style.css */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 300px;
+        }
+        .logo {
+            width: 100px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #1e3a8a;
+            margin-bottom: 20px;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #1e3a8a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #152c6e;
+        }
+        #error-message {
+            color: red;
+            margin-top: 15px;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <img src="logo.png" alt="Logo UTP" style="height: 40px; width: 40px; border-radius: 50%; object-fit: cover; margin-right: 15px; border: 1px solid #ccc;">
-    <h1>UTP – Système de gestion</h1>
-    <div id="user-info"></div>
-  </header>
 
-  <section id="login-screen" class="screen active">
-    <div style="text-align:center; margin-bottom: 20px;">
-      <img src="logo.png" alt="Logo UTP" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">
-    </div>
-    <h2 style="text-align:center; margin-bottom: 20px;">Connexion</h2>
-    <div style="display:flex; flex-direction:column; gap:10px; max-width:300px; margin:0 auto;">
-      <input id="code-input" placeholder="Entrez votre code d'accès" style="width:100%; padding:12px; border:2px solid #ccc; border-radius:8px; font-size:16px;" />
-      <button onclick="login()" style="width:100%; padding:12px; font-size:16px; border-radius:8px; background:#1e3a5f; color:white; font-weight:bold; cursor:pointer;">Se connecter</button>
-    </div>
-    <p id="login-error" class="error" style="text-align:center; margin-top:10px; color:#e74c3c; font-weight:bold;"></p>
-  </section>
-
-  <section id="main-screen" class="screen">
-    <nav>
-      <button onclick="showTab('etudiants')">Étudiants</button>
-      <button onclick="showTab('paiements')">Paiements</button>
-      <button onclick="window.location.href='/badge.html'" style="background:#2E7D32; color:white;">🎫 Badges</button>
-      <button id="btn-admin" onclick="window.location.href='/admin.html'" style="display:none; background:#00897B; color:white;">⚙️ Admin</button>
-      <button id="btn-direction" onclick="window.location.href='/direction.html'" style="display:none; background:#E65100; color:white;">⭐ Direction</button>
-      <button onclick="logout()" style="margin-left:auto;background:#e74c3c;color:#fff">Déconnexion</button>
-    </nav>
-
-    <div id="tab-etudiants" class="tab active">
-      <h2>Inscrire un étudiant</h2>
-      <div class="card" id="form-etudiant">
-        <input id="e-nom" placeholder="Nom" />
-        <input id="e-prenom" placeholder="Prénom" />
-        <input id="e-tel" placeholder="Contact (Téléphone)" />
+    <div class="login-container">
+        <!-- Remplacez par le chemin de votre logo si besoin -->
+        <img src="logo.png" alt="Logo UTP" class="logo">
+        <h2>Connexion</h2>
         
-        <select id="e-matiere"></select>
-        <select id="e-niveau"></select>
-        <select id="e-centre"></select>
-        <input id="e-date" type="date" />
-        <button onclick="ajouterEtudiant()">Ajouter l'élève</button>
-      </div>
-      <h3>Liste des élèves</h3>
-      <table id="table-etudiants">
-        <thead><tr><th>ID</th><th>Nom</th><th>Matière</th><th>Niveau</th><th>Centre</th><th>Payé</th><th>Badge</th><th>Date</th><th>Actions</th></tr></thead>
-        <tbody></tbody>
-      </table>
+        <form id="login-form">
+            <!-- ICI : Le type="password" masque le code d'accès -->
+            <input type="password" id="code_acces" placeholder="Entrez votre code d'accès" required>
+            <button type="submit">Se connecter</button>
+        </form>
+        
+        <p id="error-message">Erreur : Code incorrect</p>
     </div>
 
-    <div id="tab-paiements" class="tab">
-      <h2>Paiements / Tickets</h2>
-      <div class="card">
-        <select id="p-etudiant" style="width:100%; margin-bottom:10px;"></select>
-        <input id="p-montant" type="number" placeholder="Montant (Ar)" style="width:100%; margin-bottom:10px;" />
-        <select id="p-tranche" style="width:100%; margin-bottom:10px;">
-          <option value="total">Total</option>
-          <option value="tranche1">Tranche 1</option>
-          <option value="tranche2">Tranche 2</option>
-        </select>
-        <select id="p-mode" style="width:100%; margin-bottom:10px;" onchange="toggleReference()">
-          <option value="Espèce">Espèce</option>
-          <option value="Mobile Money">Mobile Money (Mvola, Airtel, Orange)</option>
-          <option value="Virement">Versement bancaire</option>
-          <option value="Chèque">Chèque</option>
-        </select>
-        <input id="p-reference" type="text" placeholder="Référence (N° transaction)" style="width:100%; margin-bottom:10px; display:none;" />
-        <button onclick="ajouterPaiement()">Enregistrer</button>
-      </div>
-      <div id="ticket-result"></div>
-    </div>
-  </section>
-  <script src="app.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Empêche le rechargement de la page
+            
+            const code = document.getElementById('code_acces').value;
+            const errorMessage = document.getElementById('error-message');
+            
+            errorMessage.style.display = 'none'; // Cacher l'erreur précédente
+
+            try {
+                // Appel à l'API de votre server.js
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code_acces: code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Connexion réussie : on sauvegarde le token et on redirige
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    // Redirection vers le tableau de bord (assurez-vous que ce fichier existe)
+                    window.location.href = 'dashboard.html'; 
+                } else {
+                    // Erreur renvoyée par le serveur
+                    errorMessage.textContent = data.error || 'Erreur de connexion';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                errorMessage.textContent = 'Erreur réseau. Veuillez réessayer.';
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+
 </body>
 </html>
