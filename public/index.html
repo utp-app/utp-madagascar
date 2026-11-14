@@ -4,119 +4,57 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UTP - Connexion</title>
-    <!-- Lien vers votre fichier CSS -->
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Styles de base pour la page de connexion si non définis dans style.css */
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f7f6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            text-align: center;
-            width: 300px;
-        }
-        .logo {
-            width: 100px;
-            margin-bottom: 20px;
-        }
-        h2 {
-            color: #1e3a8a;
-            margin-bottom: 20px;
-        }
-        input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #1e3a8a;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover {
-            background-color: #152c6e;
-        }
-        #error-message {
-            color: red;
-            margin-top: 15px;
-            display: none;
-        }
+        body { font-family: Arial, sans-serif; background: #f4f7f6; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; width: 300px; }
+        .logo { width: 100px; margin-bottom: 20px; }
+        h2 { color: #1e3a8a; margin-bottom: 20px; }
+        input[type="password"] { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #1e3a8a; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #152c6e; }
+        #error-message { color: red; margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
-
     <div class="login-container">
-        <!-- Remplacez par le chemin de votre logo si besoin -->
         <img src="logo.png" alt="Logo UTP" class="logo">
         <h2>Connexion</h2>
-        
         <form id="login-form">
-            <!-- ICI : Le type="password" masque le code d'accès -->
             <input type="password" id="code_acces" placeholder="Entrez votre code d'accès" required>
             <button type="submit">Se connecter</button>
         </form>
-        
         <p id="error-message">Erreur : Code incorrect</p>
     </div>
 
     <script>
         document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Empêche le rechargement de la page
-            
+            e.preventDefault();
             const code = document.getElementById('code_acces').value;
             const errorMessage = document.getElementById('error-message');
-            
-            errorMessage.style.display = 'none'; // Cacher l'erreur précédente
+            errorMessage.style.display = 'none';
 
             try {
-                // Appel à l'API de votre server.js
                 const response = await fetch('/api/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ code_acces: code })
                 });
-
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Connexion réussie : on sauvegarde le token et on redirige
                     localStorage.setItem('token', data.token);
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    
-                    // Redirection vers le tableau de bord (assurez-vous que ce fichier existe)
-                    window.location.href = 'dashboard.html'; 
+                    window.location.href = 'dashboard.html';
                 } else {
-                    // Erreur renvoyée par le serveur
                     errorMessage.textContent = data.error || 'Erreur de connexion';
                     errorMessage.style.display = 'block';
                 }
             } catch (error) {
-                console.error('Erreur:', error);
                 errorMessage.textContent = 'Erreur réseau. Veuillez réessayer.';
                 errorMessage.style.display = 'block';
             }
         });
     </script>
-
 </body>
 </html>
