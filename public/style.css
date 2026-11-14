@@ -1,0 +1,74 @@
+* { box-sizing: border-box; font-family: system-ui, sans-serif; }
+body { margin: 0; background: #f4f6f8; color: #222; }
+header { display: flex; align-items: center; padding: 12px 20px; background: #1e3a5f; color: #fff; }
+header h1 { margin: 0; font-size: 1.2rem; }
+#user-info { margin-left: auto; font-size: 0.9rem; }
+
+.screen { display: none; padding: 20px; }
+.screen.active { display: block; }
+
+#login-screen { max-width: 420px; margin: 80px auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+input, select, button { padding: 8px 10px; margin: 4px; border-radius: 6px; border: 1px solid #ccc; font-size: 0.95rem; }
+button { background: #1e3a5f; color: #fff; border: none; cursor: pointer; }
+button:hover { opacity: .9; }
+.error { color: #e74c3c; }
+.hint { color: #888; font-size: 0.85rem; }
+
+nav { display: flex; gap: 6px; background: #e8edf3; padding: 10px; border-radius: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+nav button { background: #fff; color: #1e3a5f; border: 1px solid #cbd6e2; }
+nav button:hover { background: #dce6f1; }
+
+.tab { display: none; }
+.tab.active { display: block; }
+
+.card { background: #fff; padding: 14px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.card h3 { margin-top: 0; font-size: 1rem; }
+
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+th, td { padding: 8px 10px; text-align: left; font-size: 0.9rem; border-bottom: 1px solid #eef1f5; }
+th { background: #1e3a5f; color: #fff; }
+tr:hover td { background: #f7f9fc; }
+
+.badge-ok { color: #27ae60; font-weight: bold; }
+.badge-no { color: #e74c3c; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.78rem; background: #e8edf3; }
+/* =========================================
+   ADAPTATION SMARTPHONE (RESPONSIVE)
+   ========================================= */
+@media (max-width: 768px) {
+  /* 1. Le menu du haut passe sur plusieurs lignes */
+  nav {
+    flex-direction: column;
+    gap: 8px;
+  }
+  nav button {
+    width: 100%;
+    padding: 12px;
+  }
+
+  /* 2. Les formulaires passent en mode "bloc" (un champ en dessous de l'autre) */
+  .card input, .card select, .card button {
+    width: 100% !important;
+    margin: 5px 0;
+    box-sizing: border-box;
+  }
+
+  /* 3. Le tableau devient défilable horizontalement */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    border-radius: 8px;
+  }
+  th, td {
+    font-size: 0.85rem;
+    padding: 10px;
+  }
+
+  /* 4. On ajuste les marges de l'écran de connexion */
+  #login-screen {
+    margin: 20px auto;
+    padding: 20px;
+    width: 90%;
+  }
+}

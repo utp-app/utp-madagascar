@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UTP - Générateur de Certificat (Anglais L2)</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+  body { background:#f4f7f6; padding:20px; display:flex; flex-direction:column; align-items:center; }
+  .container { background:white; border-radius:12px; padding:25px; box-shadow:0 10px 30px rgba(0,0,0,0.1); width:100%; max-width:1000px; }
+  .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #1A237E; padding-bottom:15px; }
+  .header h1 { color:#1A237E; font-size:20px; }
+  .form-group { margin-bottom:15px; display:flex; gap:15px; flex-wrap:wrap; }
+  .form-group > div { flex:1; min-width:200px; }
+  label { display:block; font-size:12px; font-weight:bold; margin-bottom:5px; color:#333; }
+  input, select { width:100%; padding:10px; border:2px solid #ddd; border-radius:8px; font-size:14px; }
+  button { padding:12px 20px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
+  .btn-primary { background:#1A237E; color:white; }
+  .btn-success { background:#2E7D32; color:white; margin-top:20px; width:100%; font-size:16px; }
+  .btn-back { background:#666; color:white; }
+
+  /* --- ZONE DU CERTIFICAT (Fond) --- */
+  #certificat-preview { 
+    position:relative; 
+    width: 1000px; 
+    height: 700px; 
+    background-image: url('fond_certificat.jpg'); 
+    background-size: 100% 100%; 
+    margin: 30px auto; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+    border: 1px solid #ccc;
+    overflow: hidden;
+  }
+
+  /* Coordonnées calées sur l'image */
+  .cert-saved { position:absolute; top: 8%; left: 5%; font-size: 14px; color:#000; font-family: Arial; font-weight:bold; }
+  .cert-nom { position:absolute; top: 51.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:32px; font-weight:bold; color:#000; font-family: Arial; white-space:nowrap; }
+  
+  /* On ajuste les blocs de texte pour qu'ils s'insèrent bien dans les lignes existantes */
+  .cert-niveau-ligne { position:absolute; top: 57.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:16px; color:#000; font-family: Arial; }
+  .cert-note-ligne { position:absolute; top: 60.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:15px; color:#000; font-family: Arial; }
+  .cert-dates-ligne { position:absolute; top: 63.5%; left: 50%; transform:translateX(-50%); width:90%; text-align:center; font-size:15px; color:#000; font-family: Arial; }
+
+  @media print {
+    @page { size: landscape; margin: 0; }
+    body * { visibility: hidden; }
+    #certificat-preview, #certificat-preview * { visibility: visible; }
+    #certificat-preview { position: fixed; left: 0; top: 0; width: 100%; height: 100%; border: none; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>🎓 Générateur de Certificat (Anglais L2)</h1>
+    <button class="btn-back" onclick="window.location.href='/'">⬅️ Retour au menu</button>
+  </div>
+
+  <div class="form-group">
+    <div>
+      <label>Rechercher un élève (Nom ou ID)</label>
+      <div style="display:flex; gap:10px;">
+        <input type="text" id="searchEleve" placeholder="ex: UTP-3005">
+        <button class="btn-primary" onclick="chercherEleve()">Vérifier</button>
+      </div>
+    </div>
+    <div>
+      <label>Date de début (Inscription)</label>
+      <input type="date" id="dateDebut">
+    </div>
+    <div>
+      <label>Date de fin (Examen +2 mois)</label>
+      <input type="date" id="dateFin">
+    </div>
+  </div>
+  <p id="statusEleve" style="font-size:13px; font-weight:bold; color:#666; margin-bottom:20px;"></p>
+
+  <div id="certificat-preview" style="display:none;">
+    <div class="cert-saved" id="cert-saved">Saved as.......... / 2026<br><span id="cert-date-print">On ...</span></div>
+    <div class="cert-nom" id="cert-nom">NOM PRENOM</div>
+    
+    <div class="cert-niveau-ligne" id="cert-niveau">The candidate has successfully completed an English course at the <strong>Intermediate</strong> level.</div>
+    <div class="cert-note-ligne" id="cert-note">And he/she has been very successful getting grade <span id="cert-grade" style="color:#666; font-weight:bold;">GOOD ENOUGH</span></div>
+    <div class="cert-dates-ligne" id="cert-dates">for 4 months from <span id="cert-date-debut">...</span> to <span id="cert-date-fin">...</span>.</div>
+  </div>
+
+  <button class="btn-success" id="btnImprimer" style="display:none;" onclick="telechargerImage('certificat-preview', 'Certificat_UTP')">
+    🖨️ Imprimer / Télécharger le Certificat
+  </button>
+</div>
+
+<script>
+var eleveActuel = null;
+
+const API_BASE = '';
+function apiHeaders() {
+  const code = sessionStorage.getItem('utp_code') || prompt('Code d\'accès Direction ?');
+  if (code) sessionStorage.setItem('utp_code', code);
+  return { 'Content-Type': 'application/json', 'x-code-acces': code || '' };
+}
+
+async function apiFetch(path) {
+  const r = await fetch(API_BASE + path, { headers: apiHeaders() });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Erreur API');
+  return r.json();
+}
+
+async function chercherEleve() {
+  var query = document.getElementById('searchEleve').value.trim().toLowerCase();
+  var status = document.getElementById('statusEleve');
+  
+  if (!query) { status.textContent = "⚠️ Tapez un nom ou un ID"; return; }
+  status.textContent = "⏳ Recherche...";
+  
+  try {
+    const eleves = await apiFetch('/api/etudiants');
+    
+    // On cherche l'élève spécifiquement en Anglais L2
+    const found = eleves.find(e => 
+      (e.utp_id.toLowerCase() === query || (e.nom + ' ' + e.prenom).toLowerCase().includes(query))
+      && e.matiere === 'Anglais' && e.niveau === 'L2' // Filtre strict
+    );
+
+    if (!found) {
+      status.textContent = "❌ Élève introuvable ou non éligible (Doit être en Anglais Niveau L2).";
+      status.style.color = "#C62828";
+      document.getElementById('certificat-preview').style.display = 'none';
+      document.getElementById('btnImprimer').style.display = 'none';
+      return;
+    }
+
+    eleveActuel = found;
+    status.textContent = "✅ Élève éligible : " + found.nom + " " + found.prenom + " (Anglais L2)";
+    status.style.color = "#2E7D32";
+
+    // Gestion des dates
+    var dateDebut = new Date(found.date_entree);
+    var dateFin = new Date(dateDebut);
+    dateFin.setMonth(dateFin.getMonth() + 4); // Durée de 4 mois pour l'anglais
+    
+    document.getElementById('dateDebut').valueAsDate = dateDebut;
+    document.getElementById('dateFin').valueAsDate = dateFin;
+
+    await genererApercu(found);
+  } catch (err) {
+    status.textContent = "❌ Erreur : " + err.message;
+    status.style.color = "#C62828";
+  }
+}
+
+// Formate la date en anglais (ex: June 30th, 2026)
+function formatEnglishDate(dateStr) {
+  if (!dateStr) return '—';
+  var d = new Date(dateStr);
+  var day = d.getDate();
+  var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var month = months[d.getMonth()];
+  var year = d.getFullYear();
+  
+  var suffix = "th";
+  if (day === 1 || day === 21 || day === 31) suffix = "st";
+  else if (day === 2 || day === 22) suffix = "nd";
+  else if (day === 3 || day === 23) suffix = "rd";
+  
+  return day + '<sup>' + suffix + '</sup> ' + month + ', ' + year;
+}
+
+async function genererApercu(eleve) {
+  var nomComplet = eleve.nom + ' ' + (eleve.prenom || '');
+  document.getElementById('cert-nom').textContent = nomComplet.toUpperCase();
+  
+  // ID
+  document.getElementById('cert-saved').innerHTML = 'Saved as <span style="color:#C62828">' + eleve.utp_id + '</span> / 2026<br>On ' + formatEnglishDate(new Date());
+  
+  // Récupération de la note de l'élève
+  let note = 0;
+  try {
+    const notes = await apiFetch('/api/notes/' + eleve.id);
+    if (notes && notes.length > 0) {
+      // On prend la note la plus récente
+      note = notes[0].total; 
+    }
+  } catch (e) {
+    console.log("Pas de note trouvée pour cet élève.");
+  }
+
+  // Détermination de la mention selon la note
+  let mention = "GOOD ENOUGH";
+  if (note >= 86) mention = "EXCELLENT";
+  else if (note >= 76) mention = "VERY GOOD";
+  else if (note >= 66) mention = "GOOD";
+  else if (note >= 50) mention = "GOOD ENOUGH";
+  else mention = "REPÊCHAGE NÉCESSAIRE";
+
+  document.getElementById('cert-grade').textContent = mention;
+  document.getElementById('cert-note').style.display = 'block';
+
+  document.getElementById('certificat-preview').style.display = 'block';
+  document.getElementById('btnImprimer').style.display = 'inline-block';
+  
+  document.getElementById('dateDebut').onchange = updateDates;
+  document.getElementById('dateFin').onchange = updateDates;
+  updateDates();
+}
+
+function updateDates() {
+  var d1 = document.getElementById('dateDebut').value;
+  var d2 = document.getElementById('dateFin').value;
+  document.getElementById('cert-date-debut').innerHTML = formatEnglishDate(d1);
+  document.getElementById('cert-date-fin').innerHTML = formatEnglishDate(d2);
+}
+
+function telechargerImage(elementId, filename) {
+  var element = document.getElementById(elementId);
+  html2canvas(element, { useCORS: true, allowTaint: true, scale: 2 }).then(function(canvas) {
+    var dataUrl = canvas.toDataURL('image/png');
+    
+    var win = window.open('', '_blank');
+    win.document.write(`
+      <html>
+      <head>
+        <title>${filename}</title>
+        <style>
+          body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f0f0; }
+          img { max-width: 100%; max-height: 100%; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+          @media print {
+            @page { size: landscape; margin: 0; }
+            body { background: white; height: auto; }
+            img { max-width: 100%; max-height: 100%; box-shadow: none; margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <img src="${dataUrl}" onload="window.print();">
+      </body>
+      </html>
+    `);
+    win.document.close();
+  });
+}
+</script>
+</body>
+</html>
